@@ -251,86 +251,150 @@ como:
   `match_poi_by_similarity` de `schema.sql` para evitar crear un POI
   duplicado cuando dos nombres distintos describen el mismo lugar).
 
-## 10. Grafo de entidades (nivel 2 / nivel 3) — cómo armarlo para una ciudad nueva
+## 10. Pipeline formal de armado de ciudad (v2)
 
-Además de los POIs, cada ciudad tiene un archivo `entidades-<ciudad>.md` con
-las **entidades** (personas, instituciones, eventos, conceptos) que salen
-mencionadas dentro del `qué contar` de un POI, y las relaciones entre ellas.
-El objetivo: que la narración pueda "profundizar" desde un POI hacia temas
-relacionados — y a veces esos temas llevan de vuelta a otro POI en otra
-punta de la ciudad, sin escribir contenido geolocalizado nuevo. Ver
-`schema.sql` (tablas `entidades` y `relaciones`) y los tres archivos
-`entidades-madrid.md`, `entidades-rio-de-janeiro.md`, `entidades-caba.md`
-como referencia de formato.
+> Versión acordada con el equipo — reemplaza el proceso manual de los §1-8
+> como visión objetivo a automatizar. Hoy varios pasos siguen siendo
+> semi-manuales (búsqueda web en vez de scraping real, un solo modelo
+> haciendo de auditor); queda marcado en cada paso qué falta para
+> automatizarlo del todo.
 
-**Proceso, por ciudad:**
+**Paso 1 — Scraping de tours existentes.**
+Recopilar los recorridos que ya arman operadores de free tours y plataformas
+de reserva (Civitatis, GuruWalks, TripAdvisor, GetYourGuide) para la ciudad.
+Esto reemplaza a la búsqueda manual del §1-A con una fuente estructurada y
+repetible. **Ojo con los Términos de Servicio**: Civitatis, TripAdvisor y
+GetYourGuide prohíben explícitamente el scraping automatizado en sus ToS —
+antes de automatizar este paso hay que decidir si se scrapea igual (riesgo
+legal/de bloqueo de IP), se usa alguna API oficial de afiliados si existe, o
+se mantiene este paso semi-manual (googlear + revisar a mano, como se hace
+hoy). No es un detalle menor: es la base de todo el pipeline.
 
-1. **Nivel 2** — para cada POI, identificar qué personas/instituciones/
-   eventos/conceptos se mencionan *explícitamente* en su `qué contar`. No
-   agregar algo que no esté ya mencionado en el texto del POI.
-2. Investigar cada una con fuente real (mismo criterio que §2: 1-2 fuentes,
-   nunca de memoria) y redactar su `contenido` en voz Yatoor.
-3. **Nivel 3** — de lo que salió investigando el nivel 2, ver qué temas
-   nuevos aparecen (otra persona, otro evento) que **también** conecten,
-   real y verificablemente, con:
-   - otra entidad de nivel 2 ya creada (ideal: cierra el grafo entre dos
-     POIs distintos sin escribir contenido nuevo), o
-   - directamente otro POI de la ciudad.
-4. **No forzar un número fijo de hijos por nodo.** Algunas entidades tienen
-   3 conexiones reales, otras ninguna (quedan como nodo final, "leaf"), y
-   eso está bien — lo que importa es que cada conexión sea verificable, no
-   completar un árbol parejo. Si un POI no abre ningún sub-tema con peso
-   real, se deja sin entidad y se anota en "Pendientes" del archivo — no se
-   inventa una conexión para no dejarlo vacío.
-5. **Distinguir conexión factual de narrativa inferida — esto es lo que
-   falló la primera vez con Rosas/Eva Perón en CABA.** Que dos entidades
-   compartan un dato verificable (mismo cementerio, mismo arquitecto, misma
-   fecha) es una conexión válida. Pero el *marco narrativo* que se le pone
-   alrededor (rivales, enemigos, opuestos, continuadores el uno del otro)
-   tiene que estar también explícitamente respaldado por la fuente — nunca
-   inferido porque "suena bien" o porque ambos son figuras polémicas. Antes
-   de escribir una relación con carga narrativa (rival, aliado, sucesor,
-   heredero), preguntarse: ¿la fuente dice esto literalmente, o lo estoy
-   armando yo por asociación? Si es lo segundo, describir sólo el dato duro
-   y sacar el marco.
-6. Documentar las relaciones al final del archivo como lista de aristas
-   `from_type / from_id / to_type / to_id` (ver los tres archivos existentes
-   para el formato exacto), y agregar 2-4 "caminos de ejemplo" que muestren
-   qué POIs quedan conectados a través de qué cadena de entidades.
-7. Cargar todo a Supabase corriendo el mismo `ingest_pois.py` ampliado (o su
-   equivalente `ingest_entidades.py`, pendiente de escribir — hoy la carga
-   de `entidades-<ciudad>.md` a las tablas `entidades`/`relaciones` es manual).
+**Paso 2 — Verificar cada punto (real, relevante, seguro).**
+De la lista cruda que sale del scraping, filtrar: ¿el lugar existe y es
+verificable? ¿tiene peso histórico/cultural real, o es solo una parada
+comercial ("trampa turística": tienda de souvenirs con comisión, restaurant
+que le paga al guía)? ¿es un punto seguro para mandar a alguien caminando
+solo con el celular en la mano? Acá también se suma contexto de barrio/zona
+(historia del barrio, no sólo del punto puntual) para que el "qué contar"
+tenga más para narrar alrededor. Esto es una extensión de lo que ya hace
+el §2 (research con fuente real) pero aplicado como filtro, no sólo como
+redacción.
 
-**Revisión antes de dar por cerrada una ciudad:** ver §11 — no alcanza con
-que cada dato tenga una fuente citada; hace falta un paso separado que
-chequee que el *marco* alrededor de cada dato también esté respaldado.
+**Paso 3 — Redactar el POI con el formato `nueva-ciudad.md`.**
+Para cada punto que pasó el filtro del paso 2: historia, por qué es
+relevante, coordenadas (validadas con `places_search`), fuente,
+`qué contar` y `dato de gancho` en voz Yatoor. Es exactamente el formato
+que ya usan `caba.md`, `madrid.md`, `rio-de-janeiro.md` — ver §3-4.
 
-## 11. Verificación de precisión — proceso de doble chequeo
+**Paso 4 — Segunda pasada: ¿falta algún POI importante?**
+Con la lista de tours ya cargada, buscar activamente qué falta — lugares
+que ningún operador de free tour incluye pero que sí tienen peso real
+(ver §1-B: densidad, categorías de museo/parque/feria/misterio). Todo lo
+que se sume acá vuelve a pasar por el paso 2 y el paso 3.
+
+**Paso 5 — Con los POIs de primer orden armados, arrancar el grafo.**
+Recién ahí, con la base de POIs "cerrada" para esa pasada, se empieza a
+construir `entidades-<ciudad>.md`.
+
+**Paso 6 — Identificar disparadores por POI y research recursivo.**
+Para cada POI, leer su `qué contar` y sacar los disparadores: un nombre y
+apellido, una época, un hecho histórico, un edificio, lo que sea que esté
+mencionado explícitamente. Cada disparador se investiga con el mismo
+estándar del paso 3 (fuente real, formato completo) — así se arma nivel 2.
+Lo que salga de investigar el nivel 2 se vuelve a mirar buscando nuevos
+disparadores, y así nivel 3, nivel 4, lo que dé. Dos reglas ya validadas
+con los primeros tres armados (Madrid/Río/CABA):
+- **No forzar un número fijo de hijos por nodo** (ni todo el mundo tiene
+  3 sub-temas reales, ni hace falta). Ver detalle completo en §12.
+- **Separar dato duro de marco narrativo** (rival, heredero, enemigo,
+  continuador) — el marco necesita el mismo respaldo de fuente que el dato.
+  Ver el error real que motivó esta regla en §13.
+
+**Paso 7 — Los ciclos son buenos, no un bug.**
+A medida que el grafo crece, es esperable que distintos POIs lleguen al
+mismo nodo de entidad (ej. dos POIs mencionan al mismo rey, al mismo
+arquitecto). Eso no se evita — al revés, es lo que se busca: cada ciclo es
+contenido reusado sin costo adicional, y es lo que conecta POIs que están
+lejos entre sí caminando. Cuantos más ciclos reales, más densa la red.
+
+**Paso 8 — Auditoría independiente (modelo 2).**
+Un modelo que **no participó de la búsqueda ni redacción** (otra sesión,
+sin el research previo en contexto) revisa el grafo terminado punto por
+punto contra fuentes propias — no las que ya están citadas, sino buscando
+de cero para no heredar los mismos sesgos de búsqueda del modelo 1. Para
+cada entidad/relación: ¿el dato está bien? Si hay una duda o discrepancia,
+se marca con un flag y una explicación de por qué se sospecha que hay un
+problema — no se corrige directamente, queda para revisar.
+
+**Paso 9 — Arbitraje (modelo 3).**
+Un tercer modelo, que ve **sólo la lista de flags del paso 8** (no el texto
+original completo, para no arrastrar el mismo marco que generó el posible
+error) decide, para cada flag, si se corrige o se descarta el flag —
+dejando por escrito el motivo de la decisión. El resultado de este paso es
+lo que se aplica al archivo final.
+
+> Nota de implementación: hoy los pasos 8 y 9 se hacen con un solo modelo
+> (yo mismo) revisando contra las fuentes ya citadas — no es lo mismo que
+> un modelo ciego re-buscando de cero, que es lo que pide el paso 8 en su
+> versión completa. Es el próximo paso a automatizar en serio: separar la
+> sesión de auditoría de la de redacción, sin contexto compartido entre
+> ambas, y agregar el paso 9 como arbitraje real en vez de que la misma
+> sesión decida sobre su propio flag.
+
+## 11. Verificación de precisión — por qué hace falta separar dato de marco
 
 Tener una fuente citada por dato no garantiza que el texto final sea fiel a
-esa fuente: el error de encuadre (Rosas/Eva Perón como "enemigos", cuando
-en realidad los separan casi 100 años) pasó con fuente citada y todo — el
-problema no fue la fuente, fue la interpretación narrativa que se le agregó
-encima. Por eso conviene un paso de revisión separado de la redacción:
+esa fuente. Dos ejemplos reales que aparecieron armando Madrid/Río/CABA:
 
-1. **Pase de auditoría con otro modelo/otra sesión.** Pedirle a una IA
-   (puede ser otra instancia, no hace falta que sea otro proveedor) que
-   lea cada entidad o relación **una por una** contra su fuente citada y
-   responda sólo: (a) ¿el dato duro que se afirma está en la fuente?, sí/no;
-   (b) ¿el marco narrativo alrededor del dato (relación, causalidad,
-   comparación) está también en la fuente, o fue agregado?; (c) si hay algo
-   agregado, marcarlo explícitamente. Es un chequeo mecánico, no hace falta
-   que la IA "sepa" del tema — sólo que compare texto contra fuente.
-2. **Encargarle la auditoría a un lote chico por vez** (una ciudad, o un
-   nivel del grafo) en vez de todo junto — más fácil de revisar la
-   respuesta y de no perder contexto en el camino.
-3. **Prestar atención especial a las palabras con carga narrativa**: rival,
-   enemigo, heredero, continuador, opuesto, símbolo de, en respuesta a. Son
-   las que más fácil se cuelan sin respaldo directo en la fuente, porque
-   suenan bien en la narración aunque el dato de base sea correcto.
-4. Esto no reemplaza la fuente citada en cada entidad — la complementa. La
-   fuente sigue siendo obligatoria (§2); la auditoría es la capa que revisa
-   que lo escrito no se haya ido más lejos de lo que la fuente realmente dice.
+- **Rosas y Eva Perón enmarcados como "enemigos"** — el dato (mismo
+  cementerio) era correcto y estaba bien citado; el problema fue el marco
+  narrativo agregado encima, sin respaldo, porque "sonaba bien" que dos
+  figuras polémicas fueran rivales. En realidad los separan casi 100 años
+  sin relación entre ambos.
+- **"Garay refundó en el mismo punto exacto" que la primera fundación de
+  1536** — acá el problema no fue el marco sino el dato mismo: la
+  ubicación de la primera fundación es un debate histórico sin resolver
+  (teoría más aceptada: Parque Lezama/San Telmo), distinto de donde Garay
+  refundó en 1580 (Plaza de Mayo). Se afirmó una precisión que ninguna
+  fuente sostiene.
+
+Por eso el paso 8/9 no puede ser sólo "¿tiene fuente citada?" — tiene que
+comparar específicamente:
+1. ¿El dato duro que se afirma está en la fuente, sí o no?
+2. ¿El marco narrativo alrededor del dato (relación, causalidad,
+   comparación, "el mismo lugar", "el mismo punto") está también en la
+   fuente, o fue agregado por asociación?
+
+**Palabras con carga narrativa a las que prestar atención especial**: rival,
+enemigo, heredero, continuador, opuesto, símbolo de, en respuesta a, el
+mismo lugar/punto exacto. Son las que más fácil se cuelan sin respaldo
+directo, porque narrativamente "cierran bien" aunque el dato de base sea
+correcto.
+
+## 12. Grafo de entidades — formato y reglas de branching
+
+Cada ciudad tiene un archivo `entidades-<ciudad>.md` con las **entidades**
+(personas, instituciones, eventos, conceptos) que salen del `qué contar` de
+un POI (nivel 2) o de otra entidad (nivel 3, 4...), más las relaciones entre
+ellas. Ver `schema.sql` (tablas `entidades` y `relaciones`) y los tres
+archivos `entidades-madrid.md`, `entidades-rio-de-janeiro.md`,
+`entidades-caba.md` como referencia de formato exacto.
+
+- **No agregar una entidad si no está mencionada explícitamente** en el
+  texto que la dispara (POI o entidad de nivel anterior) — no se investiga
+  "lo que podría ser interesante", sólo lo que ya está ahí.
+- **No forzar un número fijo de hijos por nodo.** Algunas entidades tienen
+  varias conexiones reales, otras ninguna (quedan como nodo final, "leaf"),
+  y eso está bien — lo que importa es que cada conexión sea verificable,
+  no completar un árbol parejo. Si un POI no abre ningún sub-tema con peso
+  real, se deja sin entidad y se anota en "Pendientes" del archivo.
+- Documentar las relaciones al final del archivo como lista de aristas
+  `from_type / from_id / to_type / to_id`, y agregar 2-4 "caminos de
+  ejemplo" que muestren qué POIs quedan conectados a través de qué cadena.
+- Cargar todo a Supabase corriendo `ingest_pois.py` ampliado (o su
+  equivalente `ingest_entidades.py`, pendiente de escribir — hoy la carga
+  de `entidades-<ciudad>.md` a las tablas `entidades`/`relaciones` es manual).
 
 ---
 
