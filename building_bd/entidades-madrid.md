@@ -128,6 +128,56 @@
 - fuente: https://es.wikipedia.org/wiki/Real_Alc%C3%A1zar_de_Madrid
 - última verificación: 2026-09-01
 
+### El Kilómetro Cero
+- id: kilometro-cero
+- tipo: concepto
+- nivel: 2
+- conecta con: poi:puerta-del-sol
+- contenido: Es el punto exacto, marcado desde 1950, desde donde se miden las seis carreteras radiales que salen de Madrid hacia el resto de España — la N-I, la N-II, y así. No es solo una placa curiosa: hasta hoy, cualquier distancia oficial en carretera española a Madrid se cuenta desde acá, desde esta vereda.
+- dato de gancho: Cualquier cartel de carretera que dice "Madrid, tantos km" se mide desde esta placa exacta.
+- fuente: https://es.wikipedia.org/wiki/Puerta_del_Sol
+- última verificación: 2026-09-01
+
+### La Real Casa de Correos
+- id: casa-de-correos
+- tipo: institucion
+- nivel: 2
+- conecta con: poi:puerta-del-sol
+- contenido: Es el edificio más viejo de la Puerta del Sol, de finales del siglo XVIII, y hoy funciona como sede del gobierno de la Comunidad de Madrid. Pero lo que lo hizo famoso fue su reloj, donado en 1866 por un relojero — no es un reloj cualquiera: sus campanadas de fin de año se televisan sin cortes desde 1962, ininterrumpidamente.
+- dato de gancho: El reloj de este edificio lleva más de 60 años sin faltar a una sola Nochevieja en la televisión.
+- fuente: https://es.wikipedia.org/wiki/Real_Casa_de_Correos
+- última verificación: 2026-09-01
+
+### Las doce uvas de la suerte
+- id: doce-uvas-nochevieja
+- tipo: evento
+- nivel: 2
+- conecta con: poi:puerta-del-sol
+- contenido: La versión que más se repite dice que nació en 1909, cuando los viticultores del Levante español tuvieron una cosecha tan grande que no sabían qué hacer con el excedente — y la regalaron para Nochevieja, inventando sobre la marcha que traía suerte comer una uva por campanada. Un siglo después, la costumbre se volvió nacional.
+- dato de gancho: La tradición de las doce uvas nació, literalmente, porque sobraba mucha uva un año.
+- fuente: https://www.esmadrid.com/agenda/nochevieja-puerta-del-sol
+- última verificación: 2026-09-01
+
+### La Mariblanca
+- id: mariblanca
+- tipo: concepto
+- nivel: 2
+- conecta con: poi:oso-madrono
+- contenido: Es la estatua más viajera de Madrid: la trajeron de Italia en 1625 para coronar una fuente que ya no existe, y en cuatro siglos cambió de lugar más de una vez — hasta pasó años guardada en un depósito municipal por obras del metro. Nadie se pone de acuerdo en quién representa exactamente: unos dicen que es Venus, otros que es una alegoría de la Fe. Lo que sí es seguro es que el nombre viene del color blanco de su mármol.
+- dato de gancho: Nadie se pone de acuerdo en si esta estatua representa a Venus o a la Fe — llevan cuatro siglos discutiéndolo.
+- fuente: https://es.wikipedia.org/wiki/Estatua_y_fuentes_de_la_Mariblanca
+- última verificación: 2026-09-01
+
+### El Matadero Viejo de la Villa
+- id: matadero-viejo-de-la-villa
+- tipo: institucion
+- nivel: 2
+- conecta con: poi:el-rastro
+- contenido: Fue el primer matadero municipal de Madrid, instalado en 1496 cerca de donde hoy está la Plaza de Cascorro. Alrededor se instalaron curtidores, zapateros y fabricantes de velas de sebo — todo lo que se podía hacer con lo que sobraba de un animal faenado. El matadero se mudó de lugar hace mucho, pero el barrio nunca dejó de vivir del comercio de segunda mano que arrancó a su alrededor.
+- dato de gancho: Todo el barrio de comercio de segunda mano de hoy nació como el vecindario de un matadero de 1496.
+- fuente: https://es.wikipedia.org/wiki/El_Rastro_de_Madrid
+- última verificación: 2026-09-01
+
 ---
 
 ## Nivel 3 — entidades que salen de otra entidad (y a veces vuelven a un POI)
@@ -200,6 +250,11 @@ poi      malasana-dos-de-mayo            entidad  movida-madrilena
 poi      palacio-de-cristal-retiro       entidad  manuel-azana
 poi      templo-de-debod                 entidad  campana-nubia-unesco
 poi      casa-siete-chimeneas            entidad  felipe-ii
+poi      puerta-del-sol                  entidad  kilometro-cero
+poi      puerta-del-sol                  entidad  casa-de-correos
+poi      puerta-del-sol                  entidad  doce-uvas-nochevieja
+poi      oso-madrono                     entidad  mariblanca
+poi      el-rastro                       entidad  matadero-viejo-de-la-villa
 
 entidad  alfonso-xiii                    entidad  casa-de-borbon
 entidad  felipe-v                        entidad  casa-de-borbon
@@ -222,7 +277,7 @@ entidad  siglo-de-oro-espanol            poi      barrio-de-las-letras-cervantes
 
 ## Pendientes
 
-- Faltan entidades de: Puerta del Sol (Kilómetro Cero, doce uvas), Oso y Madroño (Mariblanca),
-  Mercado de San Miguel, El Rastro (matadero viejo) — quedaron afuera de esta primera pasada
-  por acotar alcance; van en la próxima iteración.
-- Mismo criterio para Río de Janeiro y CABA: quedan pendientes en este commit.
+- Mercado de San Miguel quedó sin entidad propia: su contenido (mercados de hierro de moda
+  parisina, reconversión gourmet en 2009) no abrió un sub-tema nuevo con suficiente peso propio
+  para justificar una entidad separada — se prefirió no forzarlo.
+- Mismo criterio para Río de Janeiro y CABA: quedan pendientes, en commits separados.
