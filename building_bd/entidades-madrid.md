@@ -43,7 +43,7 @@
 - tipo: persona
 - nivel: 2
 - conecta con: poi:plaza-mayor
-- contenido: Fue quien ordenó construir la Plaza Mayor en 1617, pero nunca se mudó a vivir cerca: la mandó hacer como espacio de representación, para que la ciudad tuviera un escenario a la altura de ser la nueva capital del reino. Su estatua ecuestre, en el centro de la plaza, es en realidad un regalo de un duque italiano — y la bajaron dos veces de su pedestal, en 1873 y 1931, cada vez que se proclamaba una República.
+- contenido: Fue quien ordenó construir la Plaza Mayor en 1617, pensada como un espacio único de representación para una ciudad que recién unas décadas antes se había vuelto capital del reino — mercados, fiestas y ceremonias oficiales, todo en el mismo lugar. Su estatua ecuestre, en el centro de la plaza, es en realidad un regalo de un duque italiano — y la bajaron dos veces de su pedestal, en 1873 y 1931, cada vez que se proclamaba una República.
 - dato de gancho: La estatua del rey que mandó construir esta plaza fue derribada dos veces, cada vez que España se declaró república.
 - fuente: https://artsandculture.google.com/story/0gUhPKgSCOESKg?hl=es
 - última verificación: 2026-09-01

@@ -86,7 +86,7 @@
 - tipo: persona
 - nivel: 2
 - conecta con: poi:ateneo-grand-splendid, poi:mercado-de-abasto, poi:tumba-gardel-chacarita
-- contenido: Nació en Francia, pero se crió en los conventillos del Abasto desde chico — de ahí el apodo "el Morocho del Abasto". Grabó más de 700 canciones y transformó el tango instrumental en tango canción, con letra. Murió a los 44 años en un choque de aviones en Medellín, Colombia, en 1935, en plena gira. El cuerpo tardó casi un año en volver a Buenos Aires, recorriendo pueblos colombianos a lomo de mula antes de llegar al país.
+- contenido: Su lugar de nacimiento es, hasta hoy, un debate sin cerrar: la partida más documentada lo ubica en Toulouse, Francia, en 1890, aunque Uruguay sostiene desde hace un siglo que nació en Tacuarembó, y en 2026 apareció un documento que revivió esa versión. Lo único que nadie discute es que se crió en los conventillos del Abasto desde chico — de ahí el apodo "el Morocho del Abasto". Grabó más de 700 canciones y transformó el tango instrumental en tango canción, con letra. Murió a los 44 años en un choque de aviones en Medellín, Colombia, en 1935, en plena gira. El cuerpo tardó casi un año en volver a Buenos Aires, recorriendo pueblos colombianos a lomo de mula antes de llegar al país.
 - dato de gancho: Su cuerpo tardó casi un año en volver al país, viajando parte del camino a lomo de mula.
 - fuente: https://www.infobae.com/teleshow/2025/06/24/hace-90-anos-en-la-tragedia-aerea-de-medellin-moria-carlos-gardel/
 - última verificación: 2026-09-01
