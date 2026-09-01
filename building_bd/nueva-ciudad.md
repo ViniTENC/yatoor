@@ -402,17 +402,16 @@ archivos `entidades-madrid.md`, `entidades-rio-de-janeiro.md`,
 
 ## Checklist rápido (para copiar/pegar al arrancar una ciudad)
 
-- [ ] Buscar free tours de la ciudad, agrupados por zona (mínimo 3 zonas)
-- [ ] Sumar densidad: al menos un punto de museo, uno de parque/naturaleza,
-      uno de costumbre/feria semanal y uno de misterio/curiosidad
-- [ ] Armar lista de POIs candidatos (mínimo 25-30) cruzando 3+ operadores
-      de free tours + las categorías de densidad
-- [ ] Investigar cada uno con fuente real (Wikipedia / turismo oficial /
-      medio reconocido) — sin excepciones, incluso para leyendas
-- [ ] Redactar `qué contar` + `dato de gancho` en voz Yatoor, sin copiar texto
+- [ ] Paso 1: recopilar tours de Civitatis/GuruWalks/TripAdvisor/GetYourGuide (o búsqueda manual si el scraping no está resuelto)
+- [ ] Paso 2: filtrar puntos — reales, relevantes, seguros, sin trampas turísticas
+- [ ] Paso 3: redactar cada POI (historia, coordenadas, fuente, qué contar, dato de gancho) en formato `nueva-ciudad.md`
+- [ ] Paso 4: segunda pasada buscando POIs importantes que falten (densidad: museo/parque/feria/misterio) — todo lo nuevo vuelve a pasos 2-3
 - [ ] Validar lat/lng + place_id de cada POI con `places_search`
 - [ ] Armar `<ciudad>.md` con el formato exacto de `madrid.md`
-- [ ] Definir registro de voz (tú / voseo / etc.) en el front-matter
-- [ ] Correr `schema.sql` en Supabase (si es la primera ciudad del proyecto)
-- [ ] Correr `ingest_pois.py <ciudad>.md`
-- [ ] Verificar en Supabase que `cities` y `pois` tienen las filas esperadas
+- [ ] Correr `schema.sql` en Supabase (si es la primera ciudad del proyecto) y `ingest_pois.py <ciudad>.md`
+- [ ] Paso 5-6: armar `entidades-<ciudad>.md` — disparadores por POI, research recursivo nivel 2/3/4
+- [ ] Paso 7: revisar que el grafo tenga ciclos reales (POIs conectados por la misma entidad) — señal de que está bien armado, no un error
+- [ ] Paso 8: auditoría con modelo/sesión independiente, sin el research original en contexto
+- [ ] Paso 9: arbitraje de los flags de la auditoría, con motivo documentado por escrito
+- [ ] Verificar en Supabase que `cities`, `pois`, `entidades` y `relaciones` tienen las filas esperadas
+
