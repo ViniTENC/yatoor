@@ -126,8 +126,8 @@
 - tipo: persona
 - nivel: 2
 - conecta con: poi:rosedal-de-palermo
-- contenido: Gobernó la provincia de Buenos Aires dos veces, con mano dura, hasta que lo derrotaron en la batalla de Caseros en 1852 y tuvo que exiliarse a Inglaterra, donde murió en 1877 sin volver a pisar el país. Sus restos recién fueron repatriados en 1989 — casi 140 años después de perder el poder — y hoy descansan, casualmente, en el mismo cementerio de la Recoleta donde también está Eva Perón, dos figuras que dividieron a la Argentina en bandos opuestos, a metros una de la otra.
-- dato de gancho: Sus restos comparten el mismo cementerio que los de Eva Perón — dos figuras que dividieron el país, a metros de distancia.
+- contenido: Gobernó la provincia de Buenos Aires dos veces, con mano dura, hasta que lo derrotaron en la batalla de Caseros en 1852 y tuvo que exiliarse a Inglaterra, donde murió en 1877 sin volver a pisar el país. Sus restos recién fueron repatriados en 1989 — casi 140 años después de perder el poder — y hoy descansan, casualmente, en el mismo cementerio de la Recoleta donde también está Eva Perón — dos figuras que, casi cien años y varios ciclos políticos de distancia, terminaron a metros una de la otra.
+- dato de gancho: Sus restos comparten el mismo cementerio que los de Eva Perón, casi un siglo después.
 - fuente: https://www.britannica.com/topic/Battle-of-Caseros
 - última verificación: 2026-09-01
 
@@ -180,8 +180,8 @@
 - tipo: evento
 - nivel: 3
 - conecta con: entidad:juan-manuel-de-rosas, poi:cementerio-recoleta
-- contenido: Se peleó el 3 de febrero de 1852 entre el ejército de Rosas y el "Ejército Grande" de Justo José de Urquiza, reforzado con tropas de Brasil y Uruguay — duró apenas medio día. La derrota mandó a Rosas al exilio y abrió la puerta a la Constitución Nacional de 1853. Casi 140 años después, sus restos terminaron descansando en la Recoleta, el mismo cementerio de otra figura que también dividió al país en dos bandos: Eva Perón.
-- dato de gancho: El derrotado de esta batalla terminó descansando en el mismo cementerio que Eva Perón, siglo y medio después.
+- contenido: Se peleó el 3 de febrero de 1852 entre el ejército de Rosas y el "Ejército Grande" de Justo José de Urquiza, reforzado con tropas de Brasil y Uruguay — duró apenas medio día. La derrota mandó a Rosas al exilio y abrió la puerta a la Constitución Nacional de 1853. Casi 140 años después, sus restos terminaron descansando en la Recoleta, el mismo cementerio donde está Eva Perón — sin relación entre ambos más que el lugar: los separa casi un siglo de historia argentina.
+- dato de gancho: El derrotado de esta batalla terminó descansando en el mismo cementerio que Eva Perón, casi cien años después.
 - fuente: https://www.britannica.com/topic/Battle-of-Caseros
 - última verificación: 2026-09-01
 
@@ -221,7 +221,7 @@ entidad  batalla-de-caseros-1852         poi      cementerio-recoleta
 **Caminos de ejemplo (los más largos de las tres ciudades):**
 - Obelisco → Manuel Belgrano → Bandera argentina (nodo final, pero real y con peso propio).
 - El Ateneo (Recoleta) → Carlos Gardel → Tango → **Café Tortoni** (Monserrat) — dos puntos lejanos unidos por el mismo género musical, con la Academia Nacional de Tango funcionando literalmente arriba del café.
-- Rosedal de Palermo → Juan Manuel de Rosas → Batalla de Caseros → **Cementerio de la Recoleta**, donde también está Eva Perón — dos enemigos históricos, mismo cementerio.
+- Rosedal de Palermo → Juan Manuel de Rosas → Batalla de Caseros → **Cementerio de la Recoleta**, donde también está Eva Perón — sin relación entre ambos, pero mismo cementerio, casi un siglo de por medio.
 - El Zanjón de Granados y Plaza de Mayo comparten la misma entidad (primera fundación 1536) sin necesidad de nivel 3: ya es un puente directo entre San Telmo y Monserrat.
 
 ---
