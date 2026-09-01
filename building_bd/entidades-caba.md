@@ -36,9 +36,9 @@
 - tipo: evento
 - nivel: 2
 - conecta con: poi:plaza-de-mayo, poi:el-zanjon-de-granados
-- contenido: Pedro de Mendoza fundó un fuerte acá en 1536, pero los ataques de los pueblos originarios y el hambre lo hicieron fracasar en pocos años — la ciudad quedó completamente abandonada. Cuarenta y cuatro años después, Juan de Garay volvió a fundarla, desembarcando en el mismo punto exacto donde había estado el primer asentamiento. Nunca se encontraron los restos arqueológicos de esa primera ciudad, aunque algunos historiadores creen que estaban en las barrancas de lo que hoy es San Telmo.
-- dato de gancho: Nunca se encontraron los restos de la primera Buenos Aires, aunque la buscaron durante siglos.
-- fuente: https://es.wikipedia.org/wiki/Juan_de_Garay
+- contenido: Pedro de Mendoza fundó acá un fuerte en 1536, pero el hambre y los ataques de los pueblos originarios lo hicieron fracasar al año siguiente — la ciudad quedó abandonada. Su ubicación exacta sigue siendo un debate sin resolver entre historiadores y arqueólogos: la teoría más aceptada la ubica en Parque Lezama, en las barrancas de lo que hoy es San Telmo, aunque excavaciones ahí en los 90 tampoco encontraron restos concluyentes. Cuarenta y cuatro años después, en 1580, Juan de Garay volvió a fundar la ciudad, esta vez en la zona que hoy es Plaza de Mayo — no necesariamente en el mismo punto que el primer intento.
+- dato de gancho: Nadie sabe con certeza dónde estuvo parada la primera Buenos Aires — ni las excavaciones lo resolvieron.
+- fuente: https://es.wikipedia.org/wiki/Parque_Lezama
 - última verificación: 2026-09-01
 
 ### La Revolución de Mayo
