@@ -43,6 +43,64 @@ create index if not exists pois_embedding_idx on pois
 create index if not exists pois_city_idx on pois (city_slug);
 
 -- ============================================================
+-- Nivel 2 de contenido: fallback de barrio para llenar los silencios
+-- entre POIs hiperlocales (ver nota "arquitectura de dos niveles" en CLAUDE_2.md).
+-- ============================================================
+create table if not exists contenido_zona (
+  id text primary key,                       -- slug, ej. 'san-telmo-general'
+  city_slug text not null references cities(slug),
+  barrio text not null,
+  categoria text[] not null default '{}',
+  contenido text not null,                   -- en voz Yatoor, se dispara cuando no hay POI a 50m
+  fuente text,
+  fuente_verificada boolean not null default false,
+  ultima_verificacion date,
+  embedding vector(1536),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists contenido_zona_city_barrio_idx on contenido_zona (city_slug, barrio);
+
+-- ============================================================
+-- Grafo de relaciones: entidades (personas, instituciones, eventos, conceptos)
+-- que salen de un POI (nivel 2) o de otra entidad (nivel 3, 4...), y las
+-- aristas que las conectan entre sí — incluso de vuelta a otro POI en otra
+-- punta de la ciudad. Ver `entidades-<ciudad>.md`.
+-- ============================================================
+create table if not exists entidades (
+  id text primary key,                       -- slug, ej. 'alfonso-xiii'
+  city_slug text references cities(slug),    -- null si la entidad es transversal a varias ciudades
+  tipo text not null,                        -- 'persona' | 'institucion' | 'concepto' | 'evento'
+  nivel int not null default 2,              -- 2 = sale de un POI; 3+ = sale de otra entidad
+  nombre text not null,
+  contenido text not null,                   -- en voz Yatoor
+  dato_gancho text,
+  fuente text,
+  fuente_verificada boolean not null default false,
+  ultima_verificacion date,
+  embedding vector(1536),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists entidades_city_idx on entidades (city_slug);
+
+-- Aristas del grafo. Polimórfica: from_type/to_type son 'poi' o 'entidad',
+-- así una entidad de nivel 3 puede apuntar de vuelta a un POI en otro barrio.
+create table if not exists relaciones (
+  from_type text not null check (from_type in ('poi','entidad')),
+  from_id text not null,
+  to_type text not null check (to_type in ('poi','entidad')),
+  to_id text not null,
+  relacion text,                             -- opcional: 'protagoniza', 'sucede_a', etc.
+  orden int default 0,                       -- prioridad de profundización conversacional
+  primary key (from_type, from_id, to_type, to_id)
+);
+
+create index if not exists relaciones_from_idx on relaciones (from_type, from_id);
+
+-- ============================================================
 -- Función de matching: dado un lat/lng, devuelve los POIs
 -- dentro del radio de geofencing de esa ciudad, ordenados por distancia.
 -- Aproximación planar simple (suficiente a escala de una cuadra;
