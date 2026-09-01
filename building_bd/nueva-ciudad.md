@@ -251,7 +251,90 @@ como:
   `match_poi_by_similarity` de `schema.sql` para evitar crear un POI
   duplicado cuando dos nombres distintos describen el mismo lugar).
 
+## 10. Grafo de entidades (nivel 2 / nivel 3) — cómo armarlo para una ciudad nueva
+
+Además de los POIs, cada ciudad tiene un archivo `entidades-<ciudad>.md` con
+las **entidades** (personas, instituciones, eventos, conceptos) que salen
+mencionadas dentro del `qué contar` de un POI, y las relaciones entre ellas.
+El objetivo: que la narración pueda "profundizar" desde un POI hacia temas
+relacionados — y a veces esos temas llevan de vuelta a otro POI en otra
+punta de la ciudad, sin escribir contenido geolocalizado nuevo. Ver
+`schema.sql` (tablas `entidades` y `relaciones`) y los tres archivos
+`entidades-madrid.md`, `entidades-rio-de-janeiro.md`, `entidades-caba.md`
+como referencia de formato.
+
+**Proceso, por ciudad:**
+
+1. **Nivel 2** — para cada POI, identificar qué personas/instituciones/
+   eventos/conceptos se mencionan *explícitamente* en su `qué contar`. No
+   agregar algo que no esté ya mencionado en el texto del POI.
+2. Investigar cada una con fuente real (mismo criterio que §2: 1-2 fuentes,
+   nunca de memoria) y redactar su `contenido` en voz Yatoor.
+3. **Nivel 3** — de lo que salió investigando el nivel 2, ver qué temas
+   nuevos aparecen (otra persona, otro evento) que **también** conecten,
+   real y verificablemente, con:
+   - otra entidad de nivel 2 ya creada (ideal: cierra el grafo entre dos
+     POIs distintos sin escribir contenido nuevo), o
+   - directamente otro POI de la ciudad.
+4. **No forzar un número fijo de hijos por nodo.** Algunas entidades tienen
+   3 conexiones reales, otras ninguna (quedan como nodo final, "leaf"), y
+   eso está bien — lo que importa es que cada conexión sea verificable, no
+   completar un árbol parejo. Si un POI no abre ningún sub-tema con peso
+   real, se deja sin entidad y se anota en "Pendientes" del archivo — no se
+   inventa una conexión para no dejarlo vacío.
+5. **Distinguir conexión factual de narrativa inferida — esto es lo que
+   falló la primera vez con Rosas/Eva Perón en CABA.** Que dos entidades
+   compartan un dato verificable (mismo cementerio, mismo arquitecto, misma
+   fecha) es una conexión válida. Pero el *marco narrativo* que se le pone
+   alrededor (rivales, enemigos, opuestos, continuadores el uno del otro)
+   tiene que estar también explícitamente respaldado por la fuente — nunca
+   inferido porque "suena bien" o porque ambos son figuras polémicas. Antes
+   de escribir una relación con carga narrativa (rival, aliado, sucesor,
+   heredero), preguntarse: ¿la fuente dice esto literalmente, o lo estoy
+   armando yo por asociación? Si es lo segundo, describir sólo el dato duro
+   y sacar el marco.
+6. Documentar las relaciones al final del archivo como lista de aristas
+   `from_type / from_id / to_type / to_id` (ver los tres archivos existentes
+   para el formato exacto), y agregar 2-4 "caminos de ejemplo" que muestren
+   qué POIs quedan conectados a través de qué cadena de entidades.
+7. Cargar todo a Supabase corriendo el mismo `ingest_pois.py` ampliado (o su
+   equivalente `ingest_entidades.py`, pendiente de escribir — hoy la carga
+   de `entidades-<ciudad>.md` a las tablas `entidades`/`relaciones` es manual).
+
+**Revisión antes de dar por cerrada una ciudad:** ver §11 — no alcanza con
+que cada dato tenga una fuente citada; hace falta un paso separado que
+chequee que el *marco* alrededor de cada dato también esté respaldado.
+
+## 11. Verificación de precisión — proceso de doble chequeo
+
+Tener una fuente citada por dato no garantiza que el texto final sea fiel a
+esa fuente: el error de encuadre (Rosas/Eva Perón como "enemigos", cuando
+en realidad los separan casi 100 años) pasó con fuente citada y todo — el
+problema no fue la fuente, fue la interpretación narrativa que se le agregó
+encima. Por eso conviene un paso de revisión separado de la redacción:
+
+1. **Pase de auditoría con otro modelo/otra sesión.** Pedirle a una IA
+   (puede ser otra instancia, no hace falta que sea otro proveedor) que
+   lea cada entidad o relación **una por una** contra su fuente citada y
+   responda sólo: (a) ¿el dato duro que se afirma está en la fuente?, sí/no;
+   (b) ¿el marco narrativo alrededor del dato (relación, causalidad,
+   comparación) está también en la fuente, o fue agregado?; (c) si hay algo
+   agregado, marcarlo explícitamente. Es un chequeo mecánico, no hace falta
+   que la IA "sepa" del tema — sólo que compare texto contra fuente.
+2. **Encargarle la auditoría a un lote chico por vez** (una ciudad, o un
+   nivel del grafo) en vez de todo junto — más fácil de revisar la
+   respuesta y de no perder contexto en el camino.
+3. **Prestar atención especial a las palabras con carga narrativa**: rival,
+   enemigo, heredero, continuador, opuesto, símbolo de, en respuesta a. Son
+   las que más fácil se cuelan sin respaldo directo en la fuente, porque
+   suenan bien en la narración aunque el dato de base sea correcto.
+4. Esto no reemplaza la fuente citada en cada entidad — la complementa. La
+   fuente sigue siendo obligatoria (§2); la auditoría es la capa que revisa
+   que lo escrito no se haya ido más lejos de lo que la fuente realmente dice.
+
 ---
+
+
 
 ## Checklist rápido (para copiar/pegar al arrancar una ciudad)
 
