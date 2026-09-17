@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: planning
+stopped_at: Phase 5 context gathered
+last_updated: "2026-09-17T16:42:49.554Z"
+last_activity: "2026-09-17 — Initial roadmap, requirements, and project docs created from DOC-only ingest batch (8 files: caba.md, madrid.md, rio-de-janeiro.md, 3x entidades-*.md, ESTADO_BD.md, nueva-ciudad.md)"
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
+---
+
 # Project State
 
 ## Project Reference
@@ -19,6 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: -
 - Total execution time: 0 hours
@@ -30,6 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: -
 - Trend: -
 
@@ -50,6 +68,10 @@ Recent decisions affecting current work:
 
 None yet.
 
+### Roadmap Evolution
+
+- Phase 5 added: Mejorar pipeline de recopilación de datos (research + historia de relleno entre POIs + guardado de descripción del recorrido) — user flagged current data-collection process as weak/thin ("hay poca data de las ciudades"), wants to fix the process itself, not just audit existing output.
+
 ### Blockers/Concerns
 
 - `CLAUDE_2.md` (voice guide) and `CRITICAL_COPYRIGHT_COMPLIANCE` are referenced by nueva-ciudad.md, madrid.md, and rio-de-janeiro.md but were not part of this ingest batch and have not been located. If they exist and contain locked constraints (especially copyright compliance for sourced content), this should be verified before or during Phase 1 audit work.
@@ -64,6 +86,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-17
-Stopped at: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md created from ingest synthesis. Roadmap not yet planned into executable plans.
-Resume file: None
+Last session: 2026-09-17T16:42:49.549Z
+Stopped at: Phase 5 context gathered
+Resume file: .planning/phases/05-mejorar-pipeline-de-recopilaci-n-de-datos-research-historia-/05-CONTEXT.md
