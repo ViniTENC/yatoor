@@ -70,6 +70,16 @@ Yatoor already has draft POI content for three cities (CABA, Madrid, Rio de Jane
 | 3. Audit Category Weights & Validate Tour Generation | 0/TBD | Not started | - |
 | 4. Onboard a Fourth City End-to-End | 0/TBD | Not started | - |
 
+### Phase 5: Mejorar pipeline de recopilación de datos (research + historia de relleno entre POIs + guardado de descripción del recorrido)
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 5 to break down)
+
 ---
 *Roadmap created: 2026-09-17*
 *Last updated: 2026-09-17*
