@@ -53,9 +53,9 @@ export function ArrowLeftIcon() {
   );
 }
 
-export function CheckIcon() {
+export function CheckIcon({ color = "#F5F2EA" }: { color?: string }) {
   return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#F5F2EA" strokeWidth={3}>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3}>
       <path d="M20 6L9 17l-5-5" />
     </svg>
   );
