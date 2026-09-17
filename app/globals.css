@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .yatoor-popup .mapboxgl-popup-content {
   background: #f5f2ea;
   border-radius: 14px;

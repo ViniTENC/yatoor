@@ -9,7 +9,18 @@ import { CloseIcon } from "@/components/icons";
 import { useActiveRecorridoId } from "@/lib/useActiveRecorrido";
 import { getRecorrido, DEFAULT_ACTIVE_ID, type Mensaje } from "@/lib/recorridos";
 
-const RESPUESTA_FIJA = "Genial! Te armé algo para que veas.";
+const FILTROS = [
+  { id: "todo", label: "Todo" },
+  { id: "historia", label: "Historia" },
+  { id: "comida", label: "Comida" },
+  { id: "arte", label: "Arte" },
+  { id: "miradores", label: "Miradores" },
+];
+
+const SUGERENCIAS = ["Más corto", "Menos caminata", "Sumar café"];
+
+const FAB_SIZE = 64; // w-16
+const FAB_MARGIN = 20;
 
 export default function MapaPage() {
   const [infoOpen, setInfoOpen] = useState(false);
@@ -17,27 +28,29 @@ export default function MapaPage() {
   const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<Mensaje[]>([]);
   const [tourCard, setTourCard] = useState<TourCardData | null>(null);
+  const [grupoSeleccionado, setGrupoSeleccionado] = useState<string[]>([]);
   const [finOpen, setFinOpen] = useState(false);
+  const [filtroActivo, setFiltroActivo] = useState("todo");
+  const [toast, setToast] = useState<string | null>(null);
   const { activeId } = useActiveRecorridoId();
   const activo = getRecorrido(activeId) ?? getRecorrido(DEFAULT_ACTIVE_ID)!;
 
-  // --- FAB arrastrable ---
-  const [fabOffset, setFabOffset] = useState({ x: 0, y: 0 });
-  const dragState = useRef<{ startX: number; startY: number; base: { x: number; y: number }; dragging: boolean }>({
-    startX: 0,
-    startY: 0,
-    base: { x: 0, y: 0 },
-    dragging: false,
-  });
+  // --- FAB arrastrable con snap al borde más cercano ---
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [fabPos, setFabPos] = useState<{ left: number; top: number } | null>(null);
+  const dragState = useRef({ startX: 0, startY: 0, baseLeft: 0, baseTop: 0, dragging: false });
+
+  function fabDefaultPos() {
+    const el = containerRef.current;
+    const w = el?.clientWidth ?? 390;
+    const h = el?.clientHeight ?? 700;
+    return { left: w - FAB_SIZE - FAB_MARGIN, top: h - FAB_SIZE - 170 };
+  }
 
   function onFabPointerDown(e: React.PointerEvent) {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    dragState.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      base: fabOffset,
-      dragging: false,
-    };
+    const pos = fabPos ?? fabDefaultPos();
+    dragState.current = { startX: e.clientX, startY: e.clientY, baseLeft: pos.left, baseTop: pos.top, dragging: false };
   }
 
   function onFabPointerMove(e: React.PointerEvent) {
@@ -45,15 +58,31 @@ export default function MapaPage() {
     const dx = e.clientX - dragState.current.startX;
     const dy = e.clientY - dragState.current.startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragState.current.dragging = true;
-    if (dragState.current.dragging) {
-      setFabOffset({ x: dragState.current.base.x + dx, y: dragState.current.base.y + dy });
-    }
+    if (!dragState.current.dragging) return;
+    const el = containerRef.current;
+    const w = el?.clientWidth ?? 390;
+    const h = el?.clientHeight ?? 700;
+    const maxLeft = w - FAB_SIZE - FAB_MARGIN;
+    const maxTop = h - FAB_SIZE - 90;
+    setFabPos({
+      left: Math.min(maxLeft, Math.max(FAB_MARGIN, dragState.current.baseLeft + dx)),
+      top: Math.min(maxTop, Math.max(60, dragState.current.baseTop + dy)),
+    });
   }
 
   function onFabPointerUp() {
     if (!dragState.current.dragging) {
-      // fue un click, no un drag: togglear el panel
       setInfoOpen((v) => !v);
+    } else {
+      // snapea al borde mas cercano
+      const el = containerRef.current;
+      const w = el?.clientWidth ?? 390;
+      setFabPos((prev) => {
+        if (!prev) return prev;
+        const center = prev.left + FAB_SIZE / 2;
+        const snapLeft = center < w / 2 ? FAB_MARGIN : w - FAB_SIZE - FAB_MARGIN;
+        return { ...prev, left: snapLeft };
+      });
     }
     dragState.current.dragging = false;
   }
@@ -61,10 +90,16 @@ export default function MapaPage() {
   useEffect(() => {
     setMessages(activo.conversacion ?? []);
     setTourCard(null);
-    setFabOffset({ x: 0, y: 0 });
+    setGrupoSeleccionado([]);
+    setFabPos(null);
   }, [activo.id]);
 
   const ultimoMensaje = [...messages].reverse().find((m) => m.from === "yatoor")?.text;
+
+  function mostrarToast(texto: string) {
+    setToast(texto);
+    setTimeout(() => setToast(null), 3200);
+  }
 
   function enviarMensaje() {
     const texto = inputText.trim();
@@ -72,23 +107,45 @@ export default function MapaPage() {
     setMessages((prev) => [
       ...prev,
       { from: "vos", text: texto },
-      { from: "yatoor", text: RESPUESTA_FIJA },
+      { from: "yatoor", text: "Perfecto, armé algo con eso." },
     ]);
     setInputText("");
     setConversationOpen(true);
-    if (!tourCard) {
-      setTourCard(generarTourCard(activo));
-    }
+    setTourCard(generarTourCard(activo));
   }
 
   function ajustarTour() {
-    // simula un reajuste del LLM: un delta chico en distancia/duracion
-    const delta = (Math.random() - 0.5) * 2.2; // ej. ~ -1.1km a +1.1km
+    setMessages((prev) => [
+      ...prev,
+      { from: "vos", text: "Más corto y menos caminata" },
+      { from: "yatoor", text: "Listo, lo achico y saco una parada." },
+    ]);
+    const delta = -(0.8 + Math.random() * 0.6); // recorta ~0.8 a 1.4km, como el mockup
     setTourCard(generarTourCard(activo, delta));
   }
 
+  function toggleAmigo(key: string) {
+    setGrupoSeleccionado((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
+
+  function verEnMapa() {
+    setConversationOpen(false);
+    setInfoOpen(false);
+    if (grupoSeleccionado.length > 0) {
+      mostrarToast(
+        `Recorrido armado para vos y ${grupoSeleccionado.length} más. El audio arranca sincronizado para todos.`
+      );
+    } else {
+      mostrarToast("Ya está en el mapa. Caminá — cuando llegues, arranco.");
+    }
+  }
+
+  const fab = fabPos ?? fabDefaultPos();
+
   return (
-    <main className="relative h-screen w-full overflow-hidden bg-papel">
+    <main ref={containerRef} className="relative h-screen w-full overflow-hidden bg-papel">
       <div className="absolute inset-0">
         <MapboxMap
           center={activo.center}
@@ -102,13 +159,30 @@ export default function MapaPage() {
         <span className="inline-block bg-papel/90 backdrop-blur rounded-full px-3.5 py-1.5 font-archivo font-extrabold tracking-tight text-2xl shadow-sm">
           yatoor
         </span>
-        {/* Botón de prueba para disparar el overlay de fin de recorrido sin tener que caminar de verdad */}
+        {/* Botón de prueba para disparar el overlay de fin de recorrido sin caminar de verdad */}
         <button
           onClick={() => setFinOpen(true)}
           className="bg-papel/90 backdrop-blur rounded-full px-3 py-1.5 text-[10px] text-gris-calido shadow-sm"
         >
           Simular fin
         </button>
+      </div>
+
+      {/* chips de filtro */}
+      <div className="absolute top-16 inset-x-0 z-10 flex gap-2 px-5 overflow-x-auto no-scrollbar">
+        {FILTROS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFiltroActivo(f.id)}
+            className={`flex-shrink-0 text-xs font-medium px-3.5 py-2 rounded-full border-[0.5px] shadow-sm whitespace-nowrap ${
+              filtroActivo === f.id
+                ? "bg-tinta text-papel border-tinta"
+                : "bg-papel border-linea-marcada text-tinta"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {conversationOpen && (
@@ -150,13 +224,28 @@ export default function MapaPage() {
             {tourCard && (
               <TourCard
                 data={tourCard}
+                grupoSeleccionado={grupoSeleccionado}
+                onToggleAmigo={toggleAmigo}
                 onAjustar={ajustarTour}
-                onVerMapa={() => setConversationOpen(false)}
+                onVerMapa={verEnMapa}
               />
             )}
           </div>
 
           <div className="p-4 pt-2 flex-shrink-0">
+            {!tourCard && (
+              <div className="flex gap-2 mb-2 overflow-x-auto no-scrollbar">
+                {SUGERENCIAS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setInputText(s)}
+                    className="flex-shrink-0 text-xs border-[0.5px] border-linea-marcada rounded-full px-3 py-1.5 text-gris-medio whitespace-nowrap"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <input
                 value={inputText}
@@ -181,8 +270,8 @@ export default function MapaPage() {
 
       {!conversationOpen && (
         <div
-          className="absolute inset-x-0 bottom-24 z-20 flex flex-col items-center gap-3 px-5"
-          style={{ transform: `translate(${fabOffset.x}px, ${fabOffset.y}px)` }}
+          className="absolute z-20 flex flex-col items-end gap-3"
+          style={{ left: fab.left, top: fab.top, width: FAB_SIZE }}
         >
           <div
             className={
@@ -205,13 +294,35 @@ export default function MapaPage() {
           </div>
 
           {infoOpen && (
-            <div className="w-full bg-superficie/95 backdrop-blur rounded-2xl p-4 shadow-lg">
+            <div
+              className="bg-superficie/95 backdrop-blur rounded-2xl p-4 shadow-lg"
+              style={{
+                width: "min(320px, 82vw)",
+                position: "fixed",
+                left: "50%",
+                bottom: 96,
+                transform: "translateX(-50%)",
+              }}
+            >
               <p className="text-sm leading-relaxed">
                 {ultimoMensaje ?? "Empezá a caminar y te voy a ir contando lo que encontremos."}
               </p>
               <p className="mt-1 text-xs text-gris-calido">
                 {activo.nombre.split(" · ")[0]} · en curso
               </p>
+              {!tourCard && (
+                <div className="mt-2.5 flex gap-2 overflow-x-auto no-scrollbar">
+                  {SUGERENCIAS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setInputText(s)}
+                      className="flex-shrink-0 text-xs border-[0.5px] border-linea-marcada rounded-full px-3 py-1.5 text-gris-medio whitespace-nowrap"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="mt-2.5 flex items-center gap-2">
                 <input
                   value={inputText}
@@ -234,8 +345,10 @@ export default function MapaPage() {
                 <div className="mt-2.5">
                   <TourCard
                     data={tourCard}
+                    grupoSeleccionado={grupoSeleccionado}
+                    onToggleAmigo={toggleAmigo}
                     onAjustar={ajustarTour}
-                    onVerMapa={() => setInfoOpen(false)}
+                    onVerMapa={verEnMapa}
                   />
                 </div>
               )}
@@ -250,8 +363,18 @@ export default function MapaPage() {
         </div>
       )}
 
+      {toast && (
+        <div className="absolute bottom-24 inset-x-5 z-30 bg-tinta text-papel text-xs text-center rounded-2xl px-4 py-3 shadow-lg">
+          {toast}
+        </div>
+      )}
+
       {finOpen && (
-        <EndOfTourOverlay nombre={activo.nombre.split(" · ")[0]} onClose={() => setFinOpen(false)} />
+        <EndOfTourOverlay
+          nombre={activo.nombre.split(" · ")[0]}
+          distanciaKm={activo.distanciaKm ?? 4.2}
+          onClose={() => setFinOpen(false)}
+        />
       )}
 
       <BottomNav />
