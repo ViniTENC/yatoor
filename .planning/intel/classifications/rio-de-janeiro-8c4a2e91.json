@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/rio-de-janeiro.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Río de Janeiro — Contexto Yatoor",
+  "summary": "Curated dataset of Rio de Janeiro points of interest with location, category, story hooks, and sources for Yatoor's geofenced content.",
+  "scope": ["Yatoor", "Río de Janeiro", "geofencing", "puntos de interés", "Cristo Redentor", "Pão de Açúcar", "Escadaria Selarón", "Arcos da Lapa"],
+  "cross_refs": ["caba.md", "CLAUDE_2.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

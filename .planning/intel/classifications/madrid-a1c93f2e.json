@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/madrid.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Madrid — Contexto Yatoor",
+  "summary": "Catalog of Madrid tourist points of interest with location, category, narrative content, and sourcing for the Yatoor app.",
+  "scope": ["Madrid", "Puerta del Sol", "Plaza Mayor", "Palacio Real", "Mercado de San Miguel", "geofencing", "points of interest"],
+  "cross_refs": ["caba.md", "rio-de-janeiro.md", "CLAUDE_2.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/entidades-caba.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Buenos Aires (CABA) — Entidades y grafo de relaciones",
+  "summary": "Catálogo de entidades históricas y culturales de CABA (personas, eventos, instituciones) conectadas a POIs, en voz Yatoor.",
+  "scope": ["Buenos Aires", "CABA", "grafo de entidades", "POIs", "personas históricas", "eventos históricos", "instituciones", "voz Yatoor"],
+  "cross_refs": ["caba.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

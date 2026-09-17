@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/caba.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Buenos Aires — Contexto Yatoor",
+  "summary": "Reference dataset of Buenos Aires points of interest with narration content used by Yatoor before external geo lookups.",
+  "scope": ["Buenos Aires", "geofencing", "points of interest", "Google Places", "Supabase", "pgvector", "barrios", "Yatoor voice/tone"],
+  "cross_refs": ["CLAUDE_2.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

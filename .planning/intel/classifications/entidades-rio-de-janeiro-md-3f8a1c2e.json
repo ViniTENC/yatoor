@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/entidades-rio-de-janeiro.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Río de Janeiro — Entidades y grafo de relaciones",
+  "summary": "Content database of researched entities (people, events) connected to Rio de Janeiro POIs, forming a relationship graph for Yatoor voice content.",
+  "scope": ["Rio de Janeiro", "entities graph", "POIs", "Cristo Redentor", "Escadaria Selarón", "Garota de Ipanema", "Palácio do Catete", "Floresta da Tijuca", "Cais do Valongo"],
+  "cross_refs": ["rio-de-janeiro.md", "entidades-madrid.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

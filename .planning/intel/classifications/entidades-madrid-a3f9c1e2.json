@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/entidades-madrid.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Madrid — Entidades y grafo de relaciones",
+  "summary": "Catalog of people, institutions, and concepts linked to Madrid POIs to unlock cross-referenced content without new geolocated writing.",
+  "scope": ["Madrid", "entidades", "POIs", "grafo de relaciones", "Alfonso XIII", "Felipe III", "Inquisición española", "Plaza Mayor", "Gran Vía"],
+  "cross_refs": ["madrid.md", "CLAUDE_2.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

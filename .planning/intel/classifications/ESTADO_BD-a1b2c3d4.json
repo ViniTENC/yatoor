@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/ESTADO_BD.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Estado BD Yatoor — al 16/09/2026",
+  "summary": "Status snapshot of the Yatoor Supabase database, tables, functions, RLS, scripts, and pending work.",
+  "scope": ["Supabase", "pois table", "entidades table", "categorias table", "poi_categorias table", "poi_entidad table", "staging_monumentos_gcba table", "monumentos_relevantes table", "get_tour_candidates function", "duracion_tour_min function", "pedir_tour.py", "probar_tour_gemini.py", "RLS policies"],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}

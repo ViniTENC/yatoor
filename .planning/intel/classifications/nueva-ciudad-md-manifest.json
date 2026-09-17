@@ -1,0 +1,13 @@
+{
+  "source_path": "/Users/vicentetenconi/Documents/yatoor/building_bd/nueva-ciudad.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Cómo sumar una ciudad nueva a Yatoor",
+  "summary": "Runbook detailing the end-to-end process to research, validate, and format POIs for adding a new city to Yatoor.",
+  "scope": ["ciudades", "POIs", "geofencing", "Google Places", "ingest_pois.py", "cities table", "pois table", "voz Yatoor"],
+  "cross_refs": ["caba.md", "rio-de-janeiro.md", "madrid.md", "CRITICAL_COPYRIGHT_COMPLIANCE"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}
