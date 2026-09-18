@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import MapboxMap from "@/components/MapboxMap";
-import TourCard, { type TourCardData } from "@/components/TourCard";
 import EndOfTourOverlay from "@/components/EndOfTourOverlay";
+import ChatOverlay from "@/components/ChatOverlay";
+import PoiPhoto from "@/components/PoiPhoto";
 import { CloseIcon } from "@/components/icons";
+import type { TourCardData } from "@/components/TourCard";
 import { useActiveRecorridoId } from "@/lib/useActiveRecorrido";
-import { getRecorrido, DEFAULT_ACTIVE_ID, type Mensaje } from "@/lib/recorridos";
+import { getRecorrido, DEFAULT_ACTIVE_ID, type Mensaje, type Poi, type FiltroMapa } from "@/lib/recorridos";
 import { pedirRecorrido } from "@/lib/pedirRecorrido";
 
-const FILTROS = [
+const FILTROS: { id: "todo" | FiltroMapa; label: string }[] = [
   { id: "todo", label: "Todo" },
   { id: "historia", label: "Historia" },
   { id: "comida", label: "Comida" },
@@ -18,88 +21,59 @@ const FILTROS = [
   { id: "miradores", label: "Miradores" },
 ];
 
-const SUGERENCIAS = ["Más corto", "Menos caminata", "Sumar café"];
+const CAT_LABEL: Record<FiltroMapa, string> = {
+  historia: "HISTORIA",
+  comida: "COMIDA",
+  arte: "ARTE",
+  miradores: "MIRADOR",
+};
 
-const FAB_SIZE = 64; // w-16
-const FAB_MARGIN = 20;
+function fmtDistancia(m?: number) {
+  if (m === undefined) return "";
+  return m >= 1000 ? `${(m / 1000).toFixed(1).replace(".", ",")} km` : `${m} m`;
+}
 
 export default function MapaPage() {
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [conversationOpen, setConversationOpen] = useState(false);
-  const [inputText, setInputText] = useState("");
+  const [filtroActivo, setFiltroActivo] = useState<"todo" | FiltroMapa>("todo");
+  const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [selectedPoi, setSelectedPoi] = useState<Poi | null>(null);
+
+  const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<Mensaje[]>([]);
+  const [inputText, setInputText] = useState("");
   const [tourCard, setTourCard] = useState<TourCardData | null>(null);
   const [tourCache, setTourCache] = useState(false);
   const [armando, setArmando] = useState(false);
   const [errorArmado, setErrorArmado] = useState<string | null>(null);
   const [ultimoPrompt, setUltimoPrompt] = useState<string | null>(null);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState<string[]>([]);
+
+  const [narrating, setNarrating] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [stopIndex, setStopIndex] = useState(0);
+  const [completionOpen, setCompletionOpen] = useState(false);
   const [finOpen, setFinOpen] = useState(false);
-  const [filtroActivo, setFiltroActivo] = useState("todo");
   const [toast, setToast] = useState<string | null>(null);
+
   const { activeId } = useActiveRecorridoId();
   const activo = getRecorrido(activeId) ?? getRecorrido(DEFAULT_ACTIVE_ID)!;
+  const searchParams = useSearchParams();
 
-  // --- FAB arrastrable con snap al borde más cercano ---
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [fabPos, setFabPos] = useState<{ left: number; top: number } | null>(null);
-  const dragState = useRef({ startX: 0, startY: 0, baseLeft: 0, baseTop: 0, dragging: false });
-
-  function fabDefaultPos() {
-    const el = containerRef.current;
-    const w = el?.clientWidth ?? 390;
-    const h = el?.clientHeight ?? 700;
-    return { left: w - FAB_SIZE - FAB_MARGIN, top: h - FAB_SIZE - 170 };
-  }
-
-  function onFabPointerDown(e: React.PointerEvent) {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    const pos = fabPos ?? fabDefaultPos();
-    dragState.current = { startX: e.clientX, startY: e.clientY, baseLeft: pos.left, baseTop: pos.top, dragging: false };
-  }
-
-  function onFabPointerMove(e: React.PointerEvent) {
-    if (e.buttons !== 1) return;
-    const dx = e.clientX - dragState.current.startX;
-    const dy = e.clientY - dragState.current.startY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragState.current.dragging = true;
-    if (!dragState.current.dragging) return;
-    const el = containerRef.current;
-    const w = el?.clientWidth ?? 390;
-    const h = el?.clientHeight ?? 700;
-    const maxLeft = w - FAB_SIZE - FAB_MARGIN;
-    const maxTop = h - FAB_SIZE - 90;
-    setFabPos({
-      left: Math.min(maxLeft, Math.max(FAB_MARGIN, dragState.current.baseLeft + dx)),
-      top: Math.min(maxTop, Math.max(60, dragState.current.baseTop + dy)),
-    });
-  }
-
-  function onFabPointerUp() {
-    if (!dragState.current.dragging) {
-      setInfoOpen((v) => !v);
-    } else {
-      // snapea al borde mas cercano
-      const el = containerRef.current;
-      const w = el?.clientWidth ?? 390;
-      setFabPos((prev) => {
-        if (!prev) return prev;
-        const center = prev.left + FAB_SIZE / 2;
-        const snapLeft = center < w / 2 ? FAB_MARGIN : w - FAB_SIZE - FAB_MARGIN;
-        return { ...prev, left: snapLeft };
-      });
-    }
-    dragState.current.dragging = false;
-  }
+  useEffect(() => {
+    if (searchParams.get("chat") === "1") setChatOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setMessages(activo.conversacion ?? []);
     setTourCard(null);
     setGrupoSeleccionado([]);
-    setFabPos(null);
+    setNarrating(false);
+    setStopIndex(0);
   }, [activo.id]);
 
-  const ultimoMensaje = [...messages].reverse().find((m) => m.from === "yatoor")?.text;
+  const pois = activo.pois.filter((p) => filtroActivo === "todo" || p.filtro === filtroActivo);
+  const currentStop = activo.pois[stopIndex];
 
   function mostrarToast(texto: string) {
     setToast(texto);
@@ -109,7 +83,7 @@ export default function MapaPage() {
   async function armarRecorrido(prompt: string, mensajeUsuario: string) {
     setMessages((prev) => [...prev, { from: "vos", text: mensajeUsuario }]);
     setInputText("");
-    setConversationOpen(true);
+    setChatOpen(true);
     setArmando(true);
     setErrorArmado(null);
     setUltimoPrompt(prompt);
@@ -119,17 +93,11 @@ export default function MapaPage() {
       setTourCache(cache);
       setMessages((prev) => [
         ...prev,
-        {
-          from: "yatoor",
-          text: cache ? "Ya tenía algo muy parecido armado, te lo paso." : "Perfecto, armé esto con eso.",
-        },
+        { from: "yatoor", text: cache ? "Ya tenía algo muy parecido armado, te lo paso." : "Perfecto, armé esto con eso." },
       ]);
     } catch (err) {
       setErrorArmado(err instanceof Error ? err.message : "No se pudo armar el recorrido.");
-      setMessages((prev) => [
-        ...prev,
-        { from: "yatoor", text: "Uy, no pude armarlo ahora. ¿Lo intentamos de nuevo?" },
-      ]);
+      setMessages((prev) => [...prev, { from: "yatoor", text: "Uy, no pude armarlo ahora. ¿Lo intentamos de nuevo?" }]);
     } finally {
       setArmando(false);
     }
@@ -147,59 +115,59 @@ export default function MapaPage() {
   }
 
   function toggleAmigo(key: string) {
-    setGrupoSeleccionado((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+    setGrupoSeleccionado((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
   function verEnMapa() {
-    setConversationOpen(false);
-    setInfoOpen(false);
+    setChatOpen(false);
     if (grupoSeleccionado.length > 0) {
-      mostrarToast(
-        `Recorrido armado para vos y ${grupoSeleccionado.length} más. El audio arranca sincronizado para todos.`
-      );
+      mostrarToast(`Recorrido armado para vos y ${grupoSeleccionado.length} más. El audio arranca sincronizado para todos.`);
     } else {
       mostrarToast("Ya está en el mapa. Caminá — cuando llegues, arranco.");
     }
   }
 
-  const fab = fabPos ?? fabDefaultPos();
+  function llevameAca() {
+    setSelectedPoi(null);
+    setNarrating(true);
+    setPaused(false);
+  }
+
+  function siguienteParada() {
+    setNarrating(false);
+    if (stopIndex >= activo.pois.length - 1) {
+      setCompletionOpen(true);
+      setTimeout(() => {
+        setCompletionOpen(false);
+        setFinOpen(true);
+      }, 1600);
+    } else {
+      setStopIndex((i) => i + 1);
+      setCompletionOpen(true);
+      setTimeout(() => {
+        setCompletionOpen(false);
+        setNarrating(true);
+      }, 1400);
+    }
+  }
 
   return (
-    <main ref={containerRef} className="relative h-screen w-full overflow-hidden bg-papel">
+    <main className="relative h-screen w-full overflow-hidden bg-papel">
       <div className="absolute inset-0">
-        <MapboxMap
-          center={activo.center}
-          pois={activo.pois}
-          inicio={activo.inicio}
-          porcentaje={activo.porcentaje}
-        />
+        <MapboxMap center={activo.center} pois={activo.pois} inicio={activo.inicio} porcentaje={activo.porcentaje} />
       </div>
 
-      <div className="absolute top-0 inset-x-0 pt-5 px-5 z-10 flex items-center justify-between">
-        <span className="inline-block bg-papel/90 backdrop-blur rounded-full px-3.5 py-1.5 font-archivo font-extrabold tracking-tight text-2xl shadow-sm">
-          yatoor
-        </span>
-        {/* Botón de prueba para disparar el overlay de fin de recorrido sin caminar de verdad */}
-        <button
-          onClick={() => setFinOpen(true)}
-          className="bg-papel/90 backdrop-blur rounded-full px-3 py-1.5 text-[10px] text-gris-calido shadow-sm"
-        >
-          Simular fin
-        </button>
-      </div>
-
-      {/* chips de filtro */}
-      <div className="absolute top-16 inset-x-0 z-10 flex gap-2 px-5 overflow-x-auto no-scrollbar">
+      {/* filter chips */}
+      <div
+        className="absolute inset-x-0 z-10 flex gap-2 px-4 overflow-x-auto no-scrollbar"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+      >
         {FILTROS.map((f) => (
           <button
             key={f.id}
             onClick={() => setFiltroActivo(f.id)}
-            className={`flex-shrink-0 text-xs font-medium px-3.5 py-2 rounded-full border-[0.5px] shadow-sm whitespace-nowrap ${
-              filtroActivo === f.id
-                ? "bg-tinta text-papel border-tinta"
-                : "bg-papel border-linea-marcada text-tinta"
+            className={`flex-shrink-0 rounded-full px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap shadow-sm border ${
+              filtroActivo === f.id ? "bg-tinta text-papel border-tinta" : "bg-papel border-linea-2 text-tinta"
             }`}
           >
             {f.label}
@@ -207,202 +175,274 @@ export default function MapaPage() {
         ))}
       </div>
 
-      {conversationOpen && (
-        <div className="absolute inset-x-5 top-20 bottom-24 z-20 rounded-3xl border-[0.5px] border-linea bg-superficie/95 backdrop-blur flex flex-col shadow-lg overflow-hidden">
-          <div className="flex items-center justify-between p-4 pb-2 flex-shrink-0">
-            <span className="text-xs text-gris-calido">
-              Conversación · {activo.nombre.split(" · ")[0]}
-            </span>
-            <button
-              onClick={() => {
-                setConversationOpen(false);
-                setInfoOpen(false);
-              }}
-              aria-label="Cerrar conversación"
-              className="w-7 h-7 rounded-full bg-papel border-[0.5px] border-linea-marcada flex items-center justify-center flex-shrink-0"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-4 flex flex-col gap-2.5">
-            {messages.length > 0 ? (
-              messages.map((m, i) => (
-                <p
-                  key={i}
-                  className={
-                    m.from === "vos"
-                      ? "self-end bg-tinta text-papel text-sm px-4 py-2.5 rounded-full max-w-[80%] leading-snug"
-                      : "text-sm leading-relaxed max-w-[85%]"
-                  }
-                >
-                  {m.text}
-                </p>
-              ))
-            ) : (
-              <p className="text-sm text-gris-medio">Todavía no arrancaste este recorrido.</p>
-            )}
-
-            {armando && (
-              <p className="text-sm text-gris-medio animate-pulse">Armando tu recorrido...</p>
-            )}
-            {errorArmado && <p className="text-xs text-[#C0392B]">{errorArmado}</p>}
-
-            {tourCard && (
-              <TourCard
-                data={tourCard}
-                grupoSeleccionado={grupoSeleccionado}
-                onToggleAmigo={toggleAmigo}
-                onAjustar={ajustarTour}
-                onVerMapa={verEnMapa}
-                cache={tourCache}
-              />
-            )}
-          </div>
-
-          <div className="p-4 pt-2 flex-shrink-0">
-            {!tourCard && (
-              <div className="flex gap-2 mb-2 overflow-x-auto no-scrollbar">
-                {SUGERENCIAS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setInputText(s)}
-                    className="flex-shrink-0 text-xs border-[0.5px] border-linea-marcada rounded-full px-3 py-1.5 text-gris-medio whitespace-nowrap"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <input
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") enviarMensaje();
-                }}
-                placeholder="Preguntale algo a Yatoor..."
-                className="flex-1 border-[0.5px] border-linea-marcada rounded-full px-4 py-2.5 text-sm bg-papel placeholder:text-gris-calido outline-none"
-              />
-              <button
-                onClick={enviarMensaje}
-                aria-label="Enviar"
-                className="w-9 h-9 rounded-full bg-tinta flex items-center justify-center flex-shrink-0"
-              >
-                <div className="w-2 h-2 rounded-full bg-papel" />
-              </button>
+      {/* route banner */}
+      {narrating && (
+        <div
+          className="absolute left-4 right-4 z-[6] bg-tinta text-papel rounded-2xl px-4 py-3.5 shadow-lg"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase font-semibold text-[#c9c4b5]">Próxima parada</div>
+          <div className="font-archivo font-extrabold text-[17px] mt-0.5">{currentStop?.name}</div>
+          <div className="flex items-center gap-2 mt-2.5">
+            <div className="flex-1 h-1 rounded-full bg-white/20 overflow-hidden">
+              <div className="h-full bg-nube" style={{ width: `${((stopIndex + 1) / activo.pois.length) * 100}%` }} />
+            </div>
+            <div className="text-xs font-semibold text-[#c9c4b5] whitespace-nowrap tabular-nums">
+              Parada {stopIndex + 1} de {activo.pois.length}
             </div>
           </div>
         </div>
       )}
 
-      {!conversationOpen && (
+      {/* group strip */}
+      {grupoSeleccionado.length > 0 && (
         <div
-          className="absolute z-20 flex flex-col items-end gap-3"
-          style={{ left: fab.left, top: fab.top, width: FAB_SIZE }}
+          className="absolute left-4 right-4 z-[6] bg-papel rounded-full px-3.5 py-2 flex items-center justify-between shadow-md"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 128px)" }}
         >
-          <div
-            className={
-              infoOpen
-                ? "nube-ring shadow-[0_8px_24px_rgba(0,0,0,0.35)] flex-shrink-0"
-                : "flex-shrink-0"
-            }
-          >
+          <div className="flex">
+            {grupoSeleccionado.map((k, i) => (
+              <div
+                key={k}
+                className="w-[26px] h-[26px] rounded-full border-2 border-papel bg-sup-2 flex items-center justify-center text-[11px] font-bold"
+                style={{ marginLeft: i === 0 ? 0 : -8 }}
+              >
+                {k[0]?.toUpperCase()}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold whitespace-nowrap">
+            <span className="w-2 h-2 rounded-full bg-nube flex-shrink-0" />
+            En vivo · sincronizado
+          </div>
+        </div>
+      )}
+
+      {/* completion flash */}
+      {completionOpen && (
+        <div className="absolute inset-0 z-[15] flex flex-col items-center justify-center bg-white/90 backdrop-blur">
+          <div className="w-[72px] h-[72px] rounded-full border-[3px] border-tinta flex items-center justify-center overflow-hidden mb-4.5">
+            <div className="w-2/3 h-2/3 rounded-full bg-nube blur-[6px]" />
+          </div>
+          <div className="font-archivo font-extrabold text-[26px] bg-nube bg-clip-text text-transparent">Completado</div>
+          <div className="text-[13px] font-semibold text-gris-2 mt-1">
+            {stopIndex + 1} paradas · {activo.distanciaKm ?? 4.2} km
+          </div>
+        </div>
+      )}
+
+      {/* fab */}
+      {!chatOpen && (
+        <button
+          onClick={() => setChatOpen(true)}
+          aria-label="Preguntale a Yatoor"
+          className="absolute z-20 w-[52px] h-[52px] rounded-full bg-papel border-[3px] border-tinta flex items-center justify-center shadow-lg overflow-hidden"
+          style={{ right: 16, bottom: narrating ? 232 : 168 }}
+        >
+          <div className="w-[64%] h-[64%] rounded-full bg-nube blur-[3px]" />
+        </button>
+      )}
+
+      {toast && (
+        <div
+          className="absolute left-4 right-4 z-30 bg-papel/95 backdrop-blur rounded-2xl px-4 py-3 shadow-lg text-[13px] text-center"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+        >
+          {toast}
+        </div>
+      )}
+
+      {/* narration panel */}
+      {narrating && !completionOpen && (
+        <div className="absolute left-0 right-0 bottom-0 z-10 bg-papel rounded-t-[20px] shadow-[0_-8px_24px_rgba(20,22,26,0.12)] px-5 pt-3.5 pb-24">
+          <div className="flex justify-between items-center mb-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded-full bg-nube inline-block" />
+              <span className="text-xs font-bold">Yatoor está contando</span>
+            </div>
+            <span className="text-xs text-gris-2 font-semibold tabular-nums">{paused ? "pausado" : "1:12 / 2:40"}</span>
+          </div>
+          <div className="text-[15px] leading-relaxed mb-4">
+            {currentStop?.info ?? "Este edificio abrió como teatro en 1919, con capacidad para mil butacas"}
+            {!paused && <span className="inline-block w-0.5 h-4 align-middle bg-rosa ml-0.5 animate-pulse" />}
+          </div>
+          <div className="flex gap-2.5">
             <button
-              onPointerDown={onFabPointerDown}
-              onPointerMove={onFabPointerMove}
-              onPointerUp={onFabPointerUp}
-              aria-label={infoOpen ? "Cerrar" : "Preguntale a Yatoor"}
-              className={`w-16 h-16 rounded-full bg-tinta flex items-center justify-center touch-none ${
-                infoOpen ? "" : "shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
-              }`}
+              onClick={() => setPaused((p) => !p)}
+              aria-label={paused ? "Reanudar" : "Pausar"}
+              className="w-[52px] h-[52px] rounded-full bg-tinta text-papel flex items-center justify-center flex-shrink-0"
             >
-              <div className="w-3.5 h-3.5 rounded-full bg-papel" />
+              {paused ? (
+                <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                  <path d="M8 5l11 7-11 7V5z" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                  <rect x="6" y="5" width="4" height="14" fill="currentColor" />
+                  <rect x="14" y="5" width="4" height="14" fill="currentColor" />
+                </svg>
+              )}
+            </button>
+            <button onClick={siguienteParada} className="flex-1 bg-sup-1 border border-linea-2 rounded-full font-bold text-sm">
+              Siguiente parada
             </button>
           </div>
+        </div>
+      )}
 
-          {infoOpen && (
-            <div
-              className="bg-superficie/95 backdrop-blur rounded-2xl p-4 shadow-lg"
-              style={{
-                width: "min(320px, 82vw)",
-                position: "fixed",
-                left: "50%",
-                bottom: 96,
-                transform: "translateX(-50%)",
-              }}
-            >
-              <p className="text-sm leading-relaxed">
-                {ultimoMensaje ?? "Empezá a caminar y te voy a ir contando lo que encontremos."}
-              </p>
-              <p className="mt-1 text-xs text-gris-calido">
-                {activo.nombre.split(" · ")[0]} · en curso
-              </p>
-              {!tourCard && (
-                <div className="mt-2.5 flex gap-2 overflow-x-auto no-scrollbar">
-                  {SUGERENCIAS.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setInputText(s)}
-                      className="flex-shrink-0 text-xs border-[0.5px] border-linea-marcada rounded-full px-3 py-1.5 text-gris-medio whitespace-nowrap"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="mt-2.5 flex items-center gap-2">
-                <input
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") enviarMensaje();
-                  }}
-                  placeholder="Preguntale algo a Yatoor..."
-                  className="flex-1 border-[0.5px] border-linea-marcada rounded-full px-4 py-2.5 text-sm bg-papel placeholder:text-gris-calido outline-none"
-                />
+      {/* bottom sheet: exploration */}
+      {!narrating && !completionOpen && (
+        <div
+          className="absolute left-0 right-0 bottom-0 z-10 bg-papel rounded-t-[20px] shadow-[0_-8px_24px_rgba(20,22,26,0.12)] overflow-hidden transition-[height] duration-300"
+          style={{ height: selectedPoi ? 460 : sheetExpanded ? 460 : 320 }}
+        >
+          <button
+            onClick={() => setSheetExpanded((v) => !v)}
+            className="w-full flex justify-center pt-2.5 pb-1"
+            aria-label={sheetExpanded ? "Colapsar" : "Expandir"}
+          >
+            <span className="w-9 h-1 rounded-full bg-linea-2" />
+          </button>
+
+          {!selectedPoi && (
+            <>
+              <div className="flex items-center justify-between px-5 pt-2 pb-2">
+                <div className="font-archivo font-extrabold text-[17px] tracking-tight">{pois.length} señales cerca</div>
+              </div>
+              <div className="flex gap-2.5 px-5 pb-24 overflow-x-auto no-scrollbar">
+                {pois.map((poi) => (
+                  <button
+                    key={poi.name}
+                    onClick={() => setSelectedPoi(poi)}
+                    className={`flex-shrink-0 w-[132px] rounded-2xl p-3 text-left bg-sup-1 border ${
+                      poi.sponsored ? "border-linea-1" : "border-transparent"
+                    }`}
+                  >
+                    <div className="w-full h-16 rounded-[10px] bg-sup-2 mb-0 flex items-center justify-center text-gris-1 overflow-hidden">
+                      {poi.placeId ? (
+                        <PoiPhoto placeId={poi.placeId} alt={poi.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+                          <circle cx="12" cy="12" r="3" fill="currentColor" />
+                        </svg>
+                      )}
+                    </div>
+                    {poi.sponsored ? (
+                      <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold tracking-wide uppercase border border-linea-2 rounded-full px-2 py-0.5">
+                        Beneficio
+                      </span>
+                    ) : (
+                      <div className="text-[9px] font-medium tracking-[0.12em] uppercase text-gris-2 mt-1.5">
+                        {poi.filtro ? CAT_LABEL[poi.filtro] : ""}
+                      </div>
+                    )}
+                    <div className="font-bold text-[13px] mt-1.5 leading-tight">{poi.name}</div>
+                    <div className="text-[11px] text-gris-2 mt-1.5">
+                      {fmtDistancia(poi.distanciaM)} {poi.benefitText ? `· ${poi.benefitText}` : poi.relatoMin ? `· ${poi.relatoMin} min de relato` : ""}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {selectedPoi && (
+            <div className="px-5 pb-24 overflow-y-auto" style={{ maxHeight: 420 }}>
+              <div className="relative w-full h-[120px] rounded-2xl bg-sup-2 mb-3.5 flex items-center justify-center text-gris-1 overflow-hidden">
+                {selectedPoi.placeId ? (
+                  <PoiPhoto placeId={selectedPoi.placeId} alt={selectedPoi.name} className="w-full h-full object-cover" />
+                ) : (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.4" />
+                    <circle cx="12" cy="12" r="3" fill="currentColor" />
+                  </svg>
+                )}
                 <button
-                  onClick={enviarMensaje}
-                  aria-label="Enviar"
-                  className="w-9 h-9 rounded-full bg-tinta flex items-center justify-center flex-shrink-0"
+                  onClick={() => setSelectedPoi(null)}
+                  aria-label="Cerrar"
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/45 backdrop-blur flex items-center justify-center"
                 >
-                  <div className="w-2 h-2 rounded-full bg-papel" />
+                  <CloseIcon color="#FFFFFF" />
                 </button>
               </div>
-              {tourCard && (
-                <div className="mt-2.5">
-                  <TourCard
-                    data={tourCard}
-                    grupoSeleccionado={grupoSeleccionado}
-                    onToggleAmigo={toggleAmigo}
-                    onAjustar={ajustarTour}
-                    onVerMapa={verEnMapa}
-                    cache={tourCache}
-                  />
+              <div className="text-[10px] font-medium tracking-[0.12em] uppercase text-gris-2">
+                {selectedPoi.filtro ? CAT_LABEL[selectedPoi.filtro] : ""}
+              </div>
+              <div className="font-archivo font-extrabold text-xl tracking-tight mt-1 mb-1.5">{selectedPoi.name}</div>
+              <p className="text-sm leading-relaxed text-tinta-soft mb-2.5">
+                {selectedPoi.info ?? "Yatoor tiene una historia preparada para este lugar."}
+              </p>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-gris-2 mb-4">
+                <span className="w-3.5 h-3.5 rounded-full border border-gris-2 inline-block" />
+                Al llegar, arranca solo{selectedPoi.relatoMin ? ` · ${selectedPoi.relatoMin} min` : ""}
+              </div>
+              {selectedPoi.friendNote && (
+                <div className="flex gap-2.5 items-start bg-sup-1 rounded-2xl p-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-sup-2 flex items-center justify-center text-[13px] font-bold flex-shrink-0">
+                    {selectedPoi.friendNote.avatar}
+                  </div>
+                  <div>
+                    <div className="font-bold text-xs mb-0.5">{selectedPoi.friendNote.name}</div>
+                    <div className="text-[13px] leading-relaxed text-tinta-soft">{selectedPoi.friendNote.text}</div>
+                  </div>
                 </div>
               )}
-              <button
-                onClick={() => setConversationOpen(true)}
-                className="mt-2.5 block w-full text-center text-xs text-gris-medio underline"
-              >
-                Ver toda la conversación
-              </button>
+              {selectedPoi.benefitText && (
+                <div className="flex items-center gap-2.5 bg-sup-1 border border-dashed border-linea-3 rounded-2xl px-3.5 py-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-tinta text-papel flex items-center justify-center flex-shrink-0">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="8.4" stroke="currentColor" strokeWidth="1.6" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-[12.5px] leading-relaxed text-tinta-soft">
+                    <b className="text-tinta font-extrabold">Beneficio Yatoor:</b> {selectedPoi.benefitText}
+                  </div>
+                  <button className="text-tinta text-xs font-bold underline flex-shrink-0">Ver</button>
+                </div>
+              )}
+              <div className="flex gap-2.5">
+                <button onClick={llevameAca} className="flex-1 bg-tinta text-papel rounded-full py-3.5 font-bold text-sm">
+                  Llevame acá
+                </button>
+                <button
+                  onClick={() => mostrarToast(`Sumamos "${selectedPoi.name}" al recorrido.`)}
+                  className="flex-1 bg-sup-1 border border-linea-2 rounded-full py-3.5 font-bold text-sm"
+                >
+                  Sumar al recorrido
+                </button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {toast && (
-        <div className="absolute bottom-24 inset-x-5 z-30 bg-tinta text-papel text-xs text-center rounded-2xl px-4 py-3 shadow-lg">
-          {toast}
-        </div>
-      )}
+      <ChatOverlay
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        messages={messages}
+        inputText={inputText}
+        setInputText={setInputText}
+        onSend={enviarMensaje}
+        armando={armando}
+        errorArmado={errorArmado}
+        tourCard={tourCard}
+        grupoSeleccionado={grupoSeleccionado}
+        onToggleAmigo={toggleAmigo}
+        onAjustar={ajustarTour}
+        onVerMapa={verEnMapa}
+        cache={tourCache}
+      />
 
       {finOpen && (
         <EndOfTourOverlay
           nombre={activo.nombre.split(" · ")[0]}
           distanciaKm={activo.distanciaKm ?? 4.2}
-          onClose={() => setFinOpen(false)}
+          onClose={() => {
+            setFinOpen(false);
+            setNarrating(false);
+            setStopIndex(0);
+          }}
         />
       )}
 
