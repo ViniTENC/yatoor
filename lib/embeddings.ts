@@ -1,19 +1,24 @@
-const EMBEDDING_MODEL = "text-embedding-3-small"; // 1536 dims, matchea schema.sql
+const EMBEDDING_MODEL = "gemini-embedding-001";
+const OUTPUT_DIMENSIONALITY = 1536; // matchea el vector(1536) del schema.sql
 
 export async function embed(texto: string): Promise<number[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error("Falta OPENAI_API_KEY en el entorno del servidor.");
+    throw new Error("Falta GEMINI_API_KEY en el entorno del servidor.");
   }
 
-  const res = await fetch("https://api.openai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, input: texto }),
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: { parts: [{ text: texto }] },
+        outputDimensionality: OUTPUT_DIMENSIONALITY,
+        taskType: "SEMANTIC_SIMILARITY",
+      }),
+    }
+  );
 
   if (!res.ok) {
     const detalle = await res.text();
@@ -21,5 +26,5 @@ export async function embed(texto: string): Promise<number[]> {
   }
 
   const data = await res.json();
-  return data.data[0].embedding as number[];
+  return data.embedding.values as number[];
 }
