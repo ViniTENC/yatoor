@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yatoor · Cómo se arma un tour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papel:#F5F2EA; --superficie:#EDE9DE; --superficie-oscura:#E2DCCD;
+  --tinta:#14161A; --gris-medio:#6E7278; --gris-calido:#8A8578;
+  --linea:#DEDACF; --linea-marcada:#C9C4B5; --lima:#B9F227;
+  --verde-fill:#EAF3DE; --verde-texto:#3B6D11;
+  --ambar-fill:#FAEEDA; --ambar-texto:#854F0B;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--papel); color:var(--tinta);
+  font-family:'DM Sans',sans-serif; font-size:14px; line-height:1.55;
+  padding:48px 20px 100px;
+}
+.wrap{max-width:640px; margin:0 auto;}
+h1{font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:-.02em; font-size:26px; margin:0 0 6px;}
+.subt{color:var(--gris-medio); font-size:13px; margin:0 0 40px;}
+.subt b{color:var(--tinta); font-weight:500;}
+
+.col{position:relative; padding-left:28px;}
+.col::before{content:""; position:absolute; left:9px; top:8px; bottom:8px; width:1.5px; background:var(--linea-marcada);}
+
+.step{position:relative; margin-bottom:22px;}
+.step::before{
+  content:""; position:absolute; left:-28px; top:6px; width:11px; height:11px;
+  border-radius:50%; background:var(--papel); border:1.5px solid var(--tinta);
+}
+.step.brk::before{border-color:var(--gris-calido); background:var(--superficie);}
+
+.card{
+  background:#fff; border:0.5px solid var(--linea-marcada); border-radius:14px;
+  padding:14px 16px;
+}
+.eyebrow{font-size:10px; letter-spacing:.06em; color:var(--gris-calido); margin-bottom:3px;}
+.title{font-family:'Archivo',sans-serif; font-weight:800; font-size:15px; margin-bottom:4px;}
+.desc{font-size:12.5px; color:var(--gris-medio); line-height:1.5;}
+.code{font-family:ui-monospace,'SF Mono',monospace; font-size:11.5px; background:var(--superficie); padding:1px 5px; border-radius:4px;}
+
+.branch{
+  margin:10px 0 22px 0; padding-left:0; display:flex; gap:12px; flex-wrap:wrap;
+}
+.branchcard{flex:1; min-width:230px;}
+.branchcard .card{height:100%;}
+.tag{display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; margin-bottom:6px;}
+.tag.hit{background:var(--verde-fill); color:var(--verde-texto);}
+.tag.miss{background:var(--ambar-fill); color:var(--ambar-texto);}
+
+.sources{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+.src{flex:1; min-width:150px; border-radius:10px; padding:9px 11px; font-size:11.5px;}
+.src b{display:block; font-size:12px; margin-bottom:2px;}
+.src.a{background:var(--verde-fill); color:var(--verde-texto);}
+.src.b{background:#E6F1FB; color:#0C447C;}
+.src.c{background:var(--ambar-fill); color:var(--ambar-texto);}
+
+.callout{
+  border-radius:14px; padding:16px 18px; margin:8px 0 22px; font-size:12.5px; line-height:1.6;
+}
+.callout.think{background:var(--superficie); border:0.5px dashed var(--linea-marcada);}
+.callout.warn{background:var(--ambar-fill); color:var(--ambar-texto);}
+.callout .title{font-size:13px; margin-bottom:5px;}
+.callout.warn .title{color:var(--ambar-texto);}
+.callout.think .title{color:var(--tinta);}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:var(--gris-medio); margin-top:40px; padding-top:16px; border-top:0.5px solid var(--linea);}
+.legend span{display:inline-flex; align-items:center; gap:5px;}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Cómo se arma un tour</h1>
+  <p class="subt">Estado real de <b>/api/tour</b> — solo lo que sigue vigente hoy, no los pasos intermedios que se cambiaron en el camino (Anthropic → Gemini, OpenAI → Gemini, el experimento heurístico de <b>yatoor-demo-caba</b>).</p>
+
+  <div class="col">
+
+    <div class="step">
+      <div class="card">
+        <div class="eyebrow">entrada</div>
+        <div class="title">Usuario escribe el pedido</div>
+        <div class="desc">En el chat de <span class="code">/mapa</span> — lenguaje natural, sin estructura ("un tour de historia por San Telmo, 2 horas").</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="card">
+        <div class="eyebrow">POST /api/tour</div>
+        <div class="title">Se embedea el pedido</div>
+        <div class="desc"><span class="code">gemini-embedding-001</span>, 1536 dims, <span class="code">taskType: SEMANTIC_SIMILARITY</span> — comparar "pedido vs. pedido", no "pregunta vs. documento".</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="card">
+        <div class="eyebrow">decisión</div>
+        <div class="title">¿Ya hay algo ≥ 70% parecido en <span class="code">recorridos</span>?</div>
+        <div class="desc"><span class="code">match_recorrido_by_similarity</span> — cosine similarity contra todos los tours ya armados en esta ciudad.</div>
+      </div>
+    </div>
+
+    <div class="branch">
+      <div class="branchcard">
+        <div class="card" style="border-color:#97C459;">
+          <span class="tag hit">cache hit</span>
+          <div class="desc">Se devuelve el tour guardado tal cual, se suma <span class="code">+1</span> a <span class="code">usos</span>. Cero llamados al modelo.</div>
+        </div>
+      </div>
+      <div class="branchcard">
+        <div class="card" style="border-color:#EF9F27;">
+          <span class="tag miss">cache miss</span>
+          <div class="desc">Sigue el flujo de abajo — hay que armar el tour de cero.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step brk">
+      <div class="card">
+        <div class="eyebrow">solo en cache miss</div>
+        <div class="title">Se extrae el barrio y el tiempo del pedido</div>
+        <div class="desc"><span class="code">extraerPedido()</span> — un llamado corto a Gemini que saca <span class="code">barrios[]</span> (contra los 48 barrios oficiales de CABA) y <span class="code">minutos_max</span> del texto libre.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="card">
+        <div class="eyebrow">en paralelo</div>
+        <div class="title">Se traen anclas + relleno de esa zona</div>
+        <div class="desc"><span class="code">pois</span> (POIs verificados, hiperlocales) y <span class="code">contenido_zona</span> (relleno ya generado antes para ese barrio), ambos filtrados por los barrios detectados.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="card">
+        <div class="eyebrow">generarRecorrido()</div>
+        <div class="title">Gemini arma el tour</div>
+        <div class="desc">Ordena geográficamente, respeta el presupuesto de tiempo, y para <b>cada parada por separado</b> elige de dónde sale el contenido:</div>
+        <div class="sources">
+          <div class="src a"><b>poi_seed</b>obligatoria si aplica — ya verificada</div>
+          <div class="src b"><b>contenido_zona_seed</b>reusa relleno existente si encaja</div>
+          <div class="src c"><b>nuevo</b>solo si ninguna de las dos alcanza</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout think">
+      <div class="title">el cambio: más libertad agéntica</div>
+      Antes esto hubiera sido una regla de código rígida ("si hay ancla, usala; si no, fallback a zona; si no, generá"). Ahora esa decisión vive <b>dentro del prompt</b>, no en código intermedio: es el modelo el que evalúa, parada por parada, cuál de las tres fuentes tiene más sentido — puede mezclar las tres en un mismo tour. Es una apuesta deliberada por menos rigidez al principio, a cambio de menos control determinista.
+    </div>
+
+    <div class="step">
+      <div class="card">
+        <div class="eyebrow">postproceso</div>
+        <div class="title">El contenido "nuevo" se guarda como relleno reusable</div>
+        <div class="desc">Cada parada marcada <span class="code">fuente: "nuevo"</span> se embedea y se hace <span class="code">upsert</span> en <span class="code">contenido_zona</span>. El próximo tour de esa misma zona ya la va a encontrar ahí, sin volver a llamar al modelo para eso.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="card">
+        <div class="eyebrow">cache</div>
+        <div class="title">Se guarda el tour completo</div>
+        <div class="desc"><span class="code">insert</span> en <span class="code">recorridos</span> — título, paradas, distancia, duración, y el embedding del pedido original. Es lo que hace que el próximo pedido parecido pegue en el paso de arriba.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="card" style="border-color:var(--tinta);">
+        <div class="eyebrow">salida</div>
+        <div class="title">Respuesta al front</div>
+        <div class="desc"><span class="code">{ titulo, duracion_min, distancia_km, paradas[] }</span> — el chat de <span class="code">/mapa</span> arma la <span class="code">TourCard</span> con esto.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callout warn">
+    <div class="title">lo que todavía no hace</div>
+    La <span class="code">TourCard</span> se arma y se muestra en el chat, pero sus <span class="code">paradas</span> reales todavía <b>no llegan al mapa</b> — <span class="code">MapboxMap</span> sigue pintando los POIs hardcodeados de <span class="code">lib/recorridos.ts</span>, no lo que devuelve <span class="code">/api/tour</span>. Falta ese cable.
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#97C459;"></span>cache hit</span>
+    <span><span class="dot" style="background:#EF9F27;"></span>cache miss</span>
+    <span><span class="dot" style="background:var(--verde-texto);"></span>poi_seed</span>
+    <span><span class="dot" style="background:#0C447C;"></span>contenido_zona_seed</span>
+    <span><span class="dot" style="background:var(--ambar-texto);"></span>nuevo</span>
+  </div>
+
+</div>
+</body>
+</html>
