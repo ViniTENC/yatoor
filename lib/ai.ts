@@ -1,17 +1,51 @@
-import Anthropic from "@anthropic-ai/sdk";
-
 // Nunca expongas esta key en el cliente: usar solo desde API routes / server actions.
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+async function callGemini(opts: {
+  prompt: string;
+  system?: string;
+  jsonMode?: boolean;
+}): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    throw new Error("Falta GEMINI_API_KEY en el entorno del servidor.");
+  }
+
+  const body: Record<string, unknown> = {
+    contents: [{ role: "user", parts: [{ text: opts.prompt }] }],
+  };
+  if (opts.system) {
+    body.systemInstruction = { parts: [{ text: opts.system }] };
+  }
+  if (opts.jsonMode) {
+    body.generationConfig = { responseMimeType: "application/json" };
+  }
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!res.ok) {
+    const detalle = await res.text();
+    throw new Error(`Error llamando a Gemini (${res.status}): ${detalle}`);
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error("Gemini no devolvió texto (¿respuesta bloqueada por safety filters?).");
+  }
+  return text as string;
+}
 
 export async function askTourGuide(prompt: string) {
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 1024,
-    messages: [{ role: "user", content: prompt }],
-  });
-  return message;
+  const text = await callGemini({ prompt });
+  return { text };
 }
 
 // ============================================================
@@ -109,24 +143,14 @@ export async function generarRecorrido(
         )}`
       : "No hay POIs semilla cargados para esta zona/pedido -- armá el recorrido con tu propio conocimiento y marcá origen \"live_search\".";
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 4096,
+  const texto = await callGemini({
     system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Pedido del usuario: "${pedidoUsuario}"\n\n${contexto}`,
-      },
-    ],
+    prompt: `Pedido del usuario: "${pedidoUsuario}"\n\n${contexto}`,
+    jsonMode: true,
   });
 
-  const bloqueTexto = message.content.find((b) => b.type === "text");
-  if (!bloqueTexto || bloqueTexto.type !== "text") {
-    throw new Error("El modelo no devolvió texto.");
-  }
-
-  // el modelo a veces envuelve el JSON en ```json ... ``` pese a la instrucción
-  const limpio = bloqueTexto.text.replace(/^```json\s*|\s*```$/g, "").trim();
+  // con responseMimeType json Gemini no debería envolver en ```json, pero
+  // por las dudas lo saco igual si aparece
+  const limpio = texto.replace(/^```json\s*|\s*```$/g, "").trim();
   return JSON.parse(limpio) as RecorridoGenerado;
 }
