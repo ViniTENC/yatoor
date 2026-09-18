@@ -3,10 +3,10 @@ Yatoor · Ingesta de POIs desde los .md de contexto (caba.md, rio-de-janeiro.md,
 hacia Supabase (tabla `pois`, con embedding pgvector).
 
 Uso:
-    pip install supabase openai --break-system-packages
+    pip install supabase requests --break-system-packages
     export SUPABASE_URL="https://xxxx.supabase.co"
     export SUPABASE_SERVICE_KEY="..."      # service_role key, no la anon key
-    export OPENAI_API_KEY="..."
+    export GEMINI_API_KEY="..."
     python ingest_pois.py caba.md rio-de-janeiro.md madrid.md
 
 Qué hace:
@@ -29,7 +29,7 @@ import re
 import sys
 import unicodedata
 
-EMBEDDING_MODEL = "text-embedding-3-small"  # 1536 dims, matchea el schema.sql
+EMBEDDING_MODEL = "gemini-embedding-001"  # con outputDimensionality=1536, matchea el schema.sql
 
 FIELD_RE = re.compile(r"^- (id|barrio|lat, lng|place_id|categoría|qué contar|dato de gancho|fuente|última verificación):\s*(.*)$")
 
@@ -124,21 +124,28 @@ def parse_md_file(path: str) -> tuple[dict, list[dict], list[dict]]:
     return city, seed_pois, pending_pois
 
 
-def embed_text(client, text: str) -> list[float]:
-    resp = client.embeddings.create(model=EMBEDDING_MODEL, input=text)
-    return resp.data[0].embedding
+def embed_text(gemini_key: str, text: str) -> list[float]:
+    import requests
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{EMBEDDING_MODEL}:embedContent?key={gemini_key}"
+    body = {
+        "content": {"parts": [{"text": text}]},
+        "outputDimensionality": 1536,
+        "taskType": "SEMANTIC_SIMILARITY",
+    }
+    resp = requests.post(url, json=body, timeout=30)
+    resp.raise_for_status()
+    return resp.json()["embedding"]["values"]
 
 
 def main(md_paths: list[str]):
     from supabase import create_client
-    from openai import OpenAI
 
     supabase_url = os.environ["SUPABASE_URL"]
     supabase_key = os.environ["SUPABASE_SERVICE_KEY"]
-    openai_key = os.environ["OPENAI_API_KEY"]
+    gemini_key = os.environ["GEMINI_API_KEY"]
 
     sb = create_client(supabase_url, supabase_key)
-    oai = OpenAI(api_key=openai_key)
 
     for path in md_paths:
         print(f"\n=== {path} ===")
@@ -150,7 +157,7 @@ def main(md_paths: list[str]):
         all_pois = [(p, "seed") for p in seed_pois] + [(p, "live_search") for p in pending_pois]
 
         for poi, origen in all_pois:
-            embedding = embed_text(oai, poi["que_contar"])
+            embedding = embed_text(gemini_key, poi["que_contar"])
             row = {
                 "id": poi["id"],
                 "city_slug": city["slug"],

@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { embed } from "@/lib/embeddings";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { generarRecorrido, type PoiSemilla, type RecorridoGenerado } from "@/lib/ai";
+import {
+  generarRecorrido,
+  extraerPedido,
+  type PoiSemilla,
+  type ContenidoZonaSemilla,
+  type RecorridoGenerado,
+} from "@/lib/ai";
 
 const SIMILARITY_THRESHOLD = 0.7;
 const CITY_SLUG = "buenos-aires";
+
+function slugify(texto: string): string {
+  return texto
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
 
 export async function POST(req: NextRequest) {
   const { prompt } = await req.json();
@@ -36,9 +51,7 @@ export async function POST(req: NextRequest) {
 
   if (match && match.length > 0) {
     const hit = match[0];
-    // sumo un uso al cache hit (fire and forget, no bloquea la respuesta)
     supabaseAdmin.rpc("increment_recorrido_usos", { p_id: hit.id }).then(() => {});
-
     return NextResponse.json({
       cache: true,
       similarity: hit.similarity,
@@ -49,12 +62,25 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 2. No hay cache: busco POIs semilla de la ciudad para darle contexto real al modelo
-  const { data: poisRaw } = await supabaseAdmin
-    .from("pois")
-    .select("id, barrio, lat, lng, que_contar, categoria")
-    .eq("city_slug", CITY_SLUG)
-    .limit(80);
+  // 2. No hay cache: entiendo qué barrio(s)/tiempo pide, y busco anclas + relleno reusable
+  let barrios: string[] = [];
+  try {
+    const extraido = await extraerPedido(prompt);
+    barrios = extraido.barrios;
+  } catch (err) {
+    console.error("No se pudo extraer barrios del pedido, sigo sin filtro:", err);
+  }
+
+  let poisQuery = supabaseAdmin.from("pois").select("id, barrio, lat, lng, que_contar, categoria").eq("city_slug", CITY_SLUG);
+  let zonaQuery = supabaseAdmin.from("contenido_zona").select("id, barrio, categoria, contenido").eq("city_slug", CITY_SLUG);
+  if (barrios.length > 0) {
+    poisQuery = poisQuery.in("barrio", barrios);
+    zonaQuery = zonaQuery.in("barrio", barrios);
+  }
+  const [{ data: poisRaw }, { data: zonaRaw }] = await Promise.all([
+    poisQuery.limit(80),
+    zonaQuery.limit(40),
+  ]);
 
   // pois.id es un slug ('puente-de-la-mujer'); no hay columna de nombre
   // legible en el schema, así que lo derivo acá para pasárselo al modelo.
@@ -71,14 +97,50 @@ export async function POST(req: NextRequest) {
     categoria: p.categoria ?? [],
   }));
 
+  const contenidoZonaSemilla: ContenidoZonaSemilla[] = (zonaRaw ?? []).map((z) => ({
+    id: z.id,
+    barrio: z.barrio,
+    categoria: z.categoria ?? [],
+    contenido: z.contenido,
+  }));
+
   let tour: RecorridoGenerado;
   try {
-    tour = await generarRecorrido(prompt, poisSemilla);
+    tour = await generarRecorrido(prompt, poisSemilla, contenidoZonaSemilla);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 
-  // 3. Guardo el recorrido armado, con su embedding, para la proxima vez
+  // 3. Las paradas "nuevo" son relleno recién generado: las guardo en
+  // contenido_zona (con su propio embedding) para que el próximo tour de
+  // esa misma zona las pueda reusar en vez de regenerarlas.
+  const nuevas = tour.paradas.filter((p) => p.fuente === "nuevo");
+  await Promise.all(
+    nuevas.map(async (p) => {
+      try {
+        const id = p.contenido_zona_id ? slugify(p.contenido_zona_id) : slugify(`${p.barrio}-${p.nombre}`);
+        const contenidoEmbedding = await embed(p.que_contar);
+        await supabaseAdmin.from("contenido_zona").upsert(
+          {
+            id,
+            city_slug: CITY_SLUG,
+            barrio: p.barrio,
+            categoria: p.categoria ?? [],
+            contenido: p.que_contar,
+            fuente: "generado por el modelo en runtime (live_search), no auditado",
+            fuente_verificada: false,
+            embedding: contenidoEmbedding,
+          },
+          { onConflict: "id" }
+        );
+      } catch (err) {
+        // no rompo la respuesta al usuario solo porque no se pudo guardar el relleno
+        console.error("No se pudo guardar contenido_zona nuevo:", err);
+      }
+    })
+  );
+
+  // 4. Guardo el recorrido completo armado, con su embedding, para la próxima vez
   const { data: saved, error: saveError } = await supabaseAdmin
     .from("recorridos")
     .insert({
@@ -95,7 +157,6 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (saveError) {
-    // no rompo la respuesta al usuario solo porque falló el guardado del cache
     console.error("No se pudo guardar el recorrido en cache:", saveError.message);
   }
 
