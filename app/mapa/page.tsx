@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import MapboxMap from "@/components/MapboxMap";
-import TourCard, { generarTourCard, type TourCardData } from "@/components/TourCard";
+import TourCard, { type TourCardData } from "@/components/TourCard";
 import EndOfTourOverlay from "@/components/EndOfTourOverlay";
 import { CloseIcon } from "@/components/icons";
 import { useActiveRecorridoId } from "@/lib/useActiveRecorrido";
 import { getRecorrido, DEFAULT_ACTIVE_ID, type Mensaje } from "@/lib/recorridos";
+import { pedirRecorrido } from "@/lib/pedirRecorrido";
 
 const FILTROS = [
   { id: "todo", label: "Todo" },
@@ -28,6 +29,10 @@ export default function MapaPage() {
   const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<Mensaje[]>([]);
   const [tourCard, setTourCard] = useState<TourCardData | null>(null);
+  const [tourCache, setTourCache] = useState(false);
+  const [armando, setArmando] = useState(false);
+  const [errorArmado, setErrorArmado] = useState<string | null>(null);
+  const [ultimoPrompt, setUltimoPrompt] = useState<string | null>(null);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState<string[]>([]);
   const [finOpen, setFinOpen] = useState(false);
   const [filtroActivo, setFiltroActivo] = useState("todo");
@@ -101,27 +106,44 @@ export default function MapaPage() {
     setTimeout(() => setToast(null), 3200);
   }
 
+  async function armarRecorrido(prompt: string, mensajeUsuario: string) {
+    setMessages((prev) => [...prev, { from: "vos", text: mensajeUsuario }]);
+    setInputText("");
+    setConversationOpen(true);
+    setArmando(true);
+    setErrorArmado(null);
+    setUltimoPrompt(prompt);
+    try {
+      const { card, cache } = await pedirRecorrido(prompt);
+      setTourCard(card);
+      setTourCache(cache);
+      setMessages((prev) => [
+        ...prev,
+        {
+          from: "yatoor",
+          text: cache ? "Ya tenía algo muy parecido armado, te lo paso." : "Perfecto, armé esto con eso.",
+        },
+      ]);
+    } catch (err) {
+      setErrorArmado(err instanceof Error ? err.message : "No se pudo armar el recorrido.");
+      setMessages((prev) => [
+        ...prev,
+        { from: "yatoor", text: "Uy, no pude armarlo ahora. ¿Lo intentamos de nuevo?" },
+      ]);
+    } finally {
+      setArmando(false);
+    }
+  }
+
   function enviarMensaje() {
     const texto = inputText.trim();
     if (!texto) return;
-    setMessages((prev) => [
-      ...prev,
-      { from: "vos", text: texto },
-      { from: "yatoor", text: "Perfecto, armé algo con eso." },
-    ]);
-    setInputText("");
-    setConversationOpen(true);
-    setTourCard(generarTourCard(activo));
+    armarRecorrido(texto, texto);
   }
 
   function ajustarTour() {
-    setMessages((prev) => [
-      ...prev,
-      { from: "vos", text: "Más corto y menos caminata" },
-      { from: "yatoor", text: "Listo, lo achico y saco una parada." },
-    ]);
-    const delta = -(0.8 + Math.random() * 0.6); // recorta ~0.8 a 1.4km, como el mockup
-    setTourCard(generarTourCard(activo, delta));
+    if (!ultimoPrompt) return;
+    armarRecorrido(`${ultimoPrompt} (pero más corto y con menos caminata)`, "Más corto y menos caminata");
   }
 
   function toggleAmigo(key: string) {
@@ -221,6 +243,11 @@ export default function MapaPage() {
               <p className="text-sm text-gris-medio">Todavía no arrancaste este recorrido.</p>
             )}
 
+            {armando && (
+              <p className="text-sm text-gris-medio animate-pulse">Armando tu recorrido...</p>
+            )}
+            {errorArmado && <p className="text-xs text-[#C0392B]">{errorArmado}</p>}
+
             {tourCard && (
               <TourCard
                 data={tourCard}
@@ -228,6 +255,7 @@ export default function MapaPage() {
                 onToggleAmigo={toggleAmigo}
                 onAjustar={ajustarTour}
                 onVerMapa={verEnMapa}
+                cache={tourCache}
               />
             )}
           </div>
@@ -349,6 +377,7 @@ export default function MapaPage() {
                     onToggleAmigo={toggleAmigo}
                     onAjustar={ajustarTour}
                     onVerMapa={verEnMapa}
+                    cache={tourCache}
                   />
                 </div>
               )}

@@ -9,22 +9,6 @@ export interface TourCardData {
   deltaKm?: number; // si viene de un "Ajustar", cuánto cambió respecto a la version anterior
 }
 
-export function generarTourCard(
-  base: { nombre: string; pois: { name: string }[]; tiempoMin: number; distanciaKm?: number },
-  ajusteKm = 0
-): TourCardData {
-  const km = Math.max(0.4, (base.distanciaKm ?? base.pois.length * 0.6) + ajusteKm);
-  const duracionMin = Math.max(10, Math.round(base.tiempoMin + ajusteKm * 12));
-  return {
-    titulo: base.nombre.split(" · ")[0],
-    paradas: base.pois.map((p) => p.name),
-    duracionMin,
-    km: Math.round(km * 10) / 10,
-    minutosRelato: Math.max(4, base.pois.length * 3),
-    deltaKm: ajusteKm !== 0 ? Math.round(ajusteKm * 10) / 10 : undefined,
-  };
-}
-
 export const AMIGOS = [
   { key: "vicente", name: "Vicente", avatar: "V" },
   { key: "manuel", name: "Manuel", avatar: "M" },
@@ -55,12 +39,14 @@ export default function TourCard({
   onToggleAmigo,
   onVerMapa,
   onAjustar,
+  cache = false,
 }: {
   data: TourCardData;
   grupoSeleccionado: string[];
   onToggleAmigo: (key: string) => void;
   onVerMapa: () => void;
   onAjustar: () => void;
+  cache?: boolean;
 }) {
   return (
     <div className="self-stretch bg-papel rounded-2xl border-[0.5px] border-linea-marcada p-4 flex flex-col gap-3 shadow-sm">
@@ -68,6 +54,11 @@ export default function TourCard({
         <span className="self-start text-[10px] bg-superficie text-gris-medio px-2 py-0.5 rounded-full">
           {data.deltaKm > 0 ? "+" : ""}
           {data.deltaKm} km respecto a la v. anterior
+        </span>
+      )}
+      {cache && (
+        <span className="self-start text-[10px] bg-[#EAF3DE] text-[#3B6D11] px-2 py-0.5 rounded-full">
+          ⚡ ya lo tenía armado (cache)
         </span>
       )}
 
